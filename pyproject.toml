@@ -1,5 +1,5 @@
 [project]
-name = "django-bolt-with-batteries"
+name = "VyahanBolt"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"

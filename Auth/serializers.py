@@ -1,7 +1,10 @@
 from django_bolt.serializers import Serializer
+from typing import Literal
+
 
 class LoginRequest(Serializer):
-    email: str
+    login_type: Literal["organization", "branch"]
+    username: str
     password: str
 
 class RefreshRequest(Serializer):

@@ -167,7 +167,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "django-bolt-with-batteries"
+name = "VyahanBolt"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

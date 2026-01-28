@@ -1,5 +1,5 @@
 def main():
-    print("Hello from django-bolt-with-batteries!")
+    print("Hello from VyahanBolt!")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
 import time
 import uuid
 from django_bolt import JSON
-
+from django_bolt.auth import JWTAuthentication, InMemoryRevocation
+from django.contrib.auth.models import User
+from django_bolt.exceptions import HTTPException
 
 def generate_unique_hash():
     """
@@ -35,3 +37,15 @@ def response(status: int, message: str, data=None, error: str | None = None, hea
         },
         headers=headers
     )
+    
+async def get_current_user(request):
+    """Dependency that extracts the current user."""
+    user_id = request.get("context", {}).get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")        
+    return await User.objects.prefetch_related('branch','organization').aget(id=user_id)
+
+    
+# Revocation store for blacklisting tokens (use DjangoCacheRevocation or DjangoORMRevocation for production)
+store = InMemoryRevocation()
+jwt_auth = JWTAuthentication(revocation_store=store, require_jti=True)
