@@ -1,18 +1,18 @@
 from django_bolt import BoltAPI, Depends
 from core.utils import response, get_current_user
 from .middleware import OrganizationMiddleware
-from .serializers import OrganizationSerializer, OrganizationCreateSerializer, BranchSerializer, BranchCreateSerializer, BranchSerializerForOrganization
+from .serializers import OrganizationSerializer, OrganizationCreateSerializer, BranchSerializer, BranchCreateSerializer, BranchSerializerForOrganization, BusSerializer, BusCreateSerializer
 from django.conf import settings
 from django_bolt.auth import APIKeyAuthentication, IsAuthenticated, HasPermission
 from django_bolt.middleware import skip_middleware
 from django.contrib.auth.models import User
-from .models import Organization, Branch
+from .models import Organization, Branch, Bus
 from django.contrib.auth.models import Permission
 from core.utils import jwt_auth, store
 from asgiref.sync import sync_to_async
 
 
-open_api = BoltAPI(django_middleware=False, prefix="/api")
+open_api = BoltAPI(django_middleware=False)
 
 @open_api.post(
     "/organization/create/",
@@ -54,7 +54,7 @@ async def create_organization(request, credentials: OrganizationCreateSerializer
     
 # Protected Routes 
 api = BoltAPI(django_middleware=False, middleware=[OrganizationMiddleware], prefix="/api")
-api.mount("/open", open_api)
+api.mount("/api/open", open_api)
 
 @api.get("/organization/info/")
 async def get_organization_info(request):        
@@ -146,4 +146,123 @@ async def get_other_branches(request, user=Depends(get_current_user)):
         status=200,
         message="Branches retrieved successfully",
         data=branches
+    )
+
+# Bus Management (Organization Admin)
+
+@api.post("/bus/add/", auth=[jwt_auth], guards=[IsAuthenticated(), HasPermission("organization.is_organization_admin")])
+async def add_bus(request, credentials: BusCreateSerializer):
+    organization = request.state.get("organization")
+    bus_number = credentials.bus_number
+    preferred_days = credentials.preferred_days
+    description = credentials.description
+    metadata = credentials.metadata
+    
+    # Validate preferred_days (should be 1-7)
+    if not all(1 <= day <= 7 for day in preferred_days):
+        return response(
+            status=400,
+            message="Invalid preferred days",
+            error="Preferred days must be between 1 (Monday) and 7 (Sunday)"
+        )
+    
+    # Check if bus number already exists for this organization
+    existing_bus = await Bus.objects.filter(organization=organization, bus_number=bus_number).afirst()
+    if existing_bus:
+        return response(
+            status=400,
+            message="Bus number already exists",
+            error=f"Bus {bus_number} already exists for this organization"
+        )
+    
+    # Create the bus
+    bus = await Bus.objects.acreate(
+        organization=organization,
+        bus_number=bus_number,
+        preferred_days=preferred_days,
+        description=description,
+        metadata=metadata
+    )
+    
+    bus_serialized = BusSerializer.fields("detail").from_model(bus)
+    
+    return response(
+        status=200,
+        message="Bus created successfully",
+        data=bus_serialized
+    )
+
+@api.get("/bus/list/", auth=[jwt_auth], guards=[IsAuthenticated()])
+async def list_buses(request):
+    """
+    List all buses in the organization.
+    Available to both organization admins and branch admins.
+    """
+    organization = request.state.get("organization")
+    if not organization:
+        return response(
+            status=404,
+            message="Organization not found",
+            error="Organization context missing"
+        )
+    
+    buses = []
+    async for bus in Bus.objects.filter(organization=organization):
+        bus_serialized = BusSerializer.fields("list").from_model(bus)
+        buses.append(bus_serialized)
+    return response(
+        status=200,
+        message="Buses retrieved successfully",
+        data=buses
+    )
+
+# Get available buses based on current day (for branch admin)
+@api.delete("/bus/{bus_slug}/delete/", auth=[jwt_auth], guards=[IsAuthenticated(), HasPermission("organization.is_organization_admin")])
+async def delete_bus(request, bus_slug: str):
+    organization = request.state.get("organization")
+    try:
+        bus = await Bus.objects.aget(organization=organization, slug=bus_slug)
+        await bus.adelete()
+        return response(
+            status=200,
+            message="Bus deleted successfully",
+            data=None
+        )
+    except Bus.DoesNotExist:
+        return response(
+            status=404,
+            message="Bus not found",
+            data=None
+        )
+
+@api.get("/bus/available/", auth=[jwt_auth], guards=[IsAuthenticated()])
+async def get_available_buses(request):
+    """
+    Returns buses available today based on their preferred days.
+    Day 1 = Monday, Day 7 = Sunday
+    """
+    from datetime import datetime
+    
+    organization = request.state.get("organization")
+    if not organization:
+        return response(
+            status=404,
+            message="Organization not found",
+            error="Organization context missing"
+        )
+    
+    # Get current day of week (Monday=0, Sunday=6 in Python, so we add 1 to match our 1-7 system)
+    current_day = datetime.now().weekday() + 1  # Monday=1, Sunday=7
+    
+    # Get buses that have today in their preferred_days
+    available_buses = []
+    async for bus in Bus.objects.filter(organization=organization):
+        if current_day in bus.preferred_days:
+            bus_serialized = BusSerializer.fields("list").from_model(bus)
+            available_buses.append(bus_serialized)
+    
+    return response(
+        status=200,
+        message="Available buses retrieved successfully",
+        data=available_buses
     )

@@ -1,14 +1,13 @@
 import React, { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ParcelStatus, UserRole } from '../types';
-import { ArrowRight, Package, Truck, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import { ArrowRight, Package, Truck, CheckCircle, Clock, TrendingUp, Zap, Map, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
-  const { parcels, currentUser, organization, fetchParcels } = useApp();
+  const { parcels, currentUser, organization, fetchParcels, offices } = useApp();
   const navigate = useNavigate();
 
-  // Fetch parcels when component mounts
   useEffect(() => {
     if (currentUser) {
       fetchParcels();
@@ -26,124 +25,192 @@ export const Dashboard: React.FC = () => {
     pending: relevantParcels.filter(p => p.currentStatus === ParcelStatus.BOOKED).length,
   };
 
-  const StatCard = ({ label, value, icon: Icon, color, trend }: any) => (
-    <div className="glass p-7 rounded-2xl transition-all hover:bg-slate-50 hover:shadow-md border border-slate-200 group bg-white/80">
-      <div className="flex items-start justify-between mb-6">
-        <div className={`p-3 rounded-xl bg-orange-500/10 border border-orange-500/20`}>
-          <Icon className={`w-6 h-6 text-[#F97316]`} />
+  const StatCard = ({ label, value, icon: Icon, color, trend, delay }: any) => (
+    <div 
+      className="group relative bg-white p-6 rounded-[1.5rem] transition-all duration-300 hover:shadow-2xl hover:bg-slate-50 border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl group-hover:bg-orange-500/10 transition-colors"></div>
+      
+      <div className="flex items-start justify-between mb-4">
+        <div className={`p-3.5 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg shadow-orange-500/20 text-white group-hover:scale-110 transition-transform duration-500`}>
+          <Icon className="w-5 h-5" />
         </div>
+        {trend && (
+          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold ${trend.startsWith('+') ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
+            <TrendingUp className={`w-3 h-3 ${trend.startsWith('-') ? 'rotate-180' : ''}`} />
+            {trend}
+          </div>
+        )}
       </div>
       <div>
-        <h3 className="text-4xl font-brand font-bold text-slate-900 mb-1 tracking-tight">{value}</h3>
-        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-500">{label}</p>
+        <h3 className="text-3xl font-brand font-bold text-slate-900 mb-0.5 tracking-tight">{value}</h3>
+        <p className="text-[9px] uppercase font-bold text-slate-400 tracking-[0.2em]">{label}</p>
       </div>
     </div>
   );
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-brand font-bold text-slate-900 tracking-tight">
-            {currentUser?.role === UserRole.SUPER_ADMIN ? `Welcome, ${organization?.title}` : `Welcome, ${currentUser?.name}`}
-          </h1>
-          <p className="text-slate-500 mt-1 font-brand text-sm tracking-wide">
-            {currentUser?.role === UserRole.SUPER_ADMIN
-              ? `Managing ${organization?.title} network.`
-              : `Managing ${currentUser?.name} branch.`}
-          </p>
-        </div>
-        <div className="text-[10px] font-bold text-slate-500 glass px-4 py-2.5 rounded-xl uppercase tracking-widest border border-slate-200 font-brand bg-white/50">
-          Today: {new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+    <div className="space-y-8 animate-in fade-in duration-700">
+      {/* Premium Hero Section */}
+      <div className="relative overflow-hidden rounded-[2rem] bg-slate-900 p-8 md:p-10 text-white shadow-2xl">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-orange-500 rounded-full blur-[120px] opacity-20"></div>
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-72 h-72 bg-blue-600 rounded-full blur-[100px] opacity-10"></div>
+        
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+               <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center orange-glow">
+                  <Zap className="w-5 h-5 text-white" />
+               </div>
+               <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-400">System Command Center</span>
+            </div>
+            
+            <h1 className="text-3xl md:text-5xl font-bold font-brand tracking-tight leading-tight">
+              {currentUser?.role === UserRole.SUPER_ADMIN ? `${organization?.title}` : `${currentUser?.name}`} Terminal
+            </h1>
+            
+            <p className="text-slate-400 max-w-lg text-base leading-relaxed">
+              {currentUser?.role === UserRole.SUPER_ADMIN
+                ? "Overseeing global logistics infrastructure and branch operational integrity."
+                : `Primary management node for ${currentUser?.name} branch operations.`}
+            </p>
+
+            <div className="flex flex-wrap gap-3 pt-2">
+              <div className="flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white/80">
+                <Map className="w-3.5 h-3.5 text-orange-400" />
+                Network Live
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white/80">
+                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                Secured Node
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden lg:grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-right-10 duration-1000">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl space-y-1">
+               <p className="text-2xl font-brand font-bold text-[#F97316]">{stats.inTransit + stats.pending}</p>
+               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Flow</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl space-y-1 translate-y-4">
+               <p className="text-2xl font-brand font-bold text-emerald-400">{stats.delivered}</p>
+               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Completed</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl space-y-1">
+               <p className="text-2xl font-brand font-bold text-slate-400 uppercase">Live</p>
+               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Status</p>
+            </div>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl space-y-1 translate-y-4">
+               <p className="text-2xl font-brand font-bold text-blue-400">{offices?.length || 0}</p>
+               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Hubs</p>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          label="Global Shipments"
+          label="Total Packets"
           value={stats.total}
           icon={Package}
           trend="+12%"
+          delay={100}
         />
         <StatCard
-          label="Active Transit"
+          label="In Transit"
           value={stats.inTransit}
           icon={Truck}
           trend="+5%"
+          delay={200}
         />
         <StatCard
-          label="Total Deliveries"
+          label="Successfully Delivered"
           value={stats.delivered}
           icon={CheckCircle}
           trend="+8%"
+          delay={300}
         />
         <StatCard
-          label="Backlog Queue"
+          label="Pending Queue"
           value={stats.pending}
           icon={Clock}
           trend="-2%"
+          delay={400}
         />
       </div>
 
-      <div className="glass rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
-        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+      <div className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-200 shadow-xl">
+        <div className="px-10 py-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
           <div>
-            <h3 className="font-brand font-bold text-lg text-slate-900">Recent Shipments</h3>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-brand">Live Updates</p>
+            <h3 className="font-brand font-bold text-2xl text-slate-900 tracking-tight">Recent Infrastructure Log</h3>
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mt-1">Real-time Delivery Telemetry</p>
           </div>
-          <button onClick={() => navigate('/shipments')} className="text-xs font-bold text-[#F97316] hover:bg-[#F97316]/10 px-4 py-2 rounded-xl border border-[#F97316]/30 transition-all uppercase tracking-widest">View All</button>
+          <button 
+            onClick={() => navigate('/shipments')} 
+            className="group flex items-center gap-2 text-xs font-bold text-white bg-slate-900 hover:bg-black px-6 py-4 rounded-2xl transition-all shadow-lg"
+          >
+            Access Full Inventory
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
 
         {relevantParcels.length === 0 ? (
-          <div className="p-20 text-center">
-            <div className="bg-slate-50 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-200">
-              <Package className="w-10 h-10 text-slate-700" />
+          <div className="py-24 text-center">
+            <div className="bg-slate-50 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-slate-200">
+              <Package className="w-10 h-10 text-slate-300" />
             </div>
-            <p className="text-slate-500 font-brand">No data packets detected in local vicinity.</p>
+            <h3 className="text-xl font-bold font-brand text-slate-800 mb-2">No active data streams</h3>
+            <p className="text-slate-500 max-w-xs mx-auto text-sm leading-relaxed">The logistics network is currently awaiting new dispatch initializations.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                  <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand">Parcel ID</th>
-                  <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand">Status</th>
-                  <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand">Route</th>
-                  <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand">Value</th>
-                  <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand">Date</th>
+                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Shipment Trace</th>
+                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Logistics Status</th>
+                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Vector Path</th>
+                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Timestamp</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {relevantParcels.slice(0, 5).map(parcel => (
-                  <tr key={parcel.slug} className="hover:bg-slate-50 transition-all group cursor-pointer">
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-[#F97316]/10 border border-[#F97316]/20 flex items-center justify-center text-[#F97316]">
-                            <Package className="w-4 h-4" />
+                {relevantParcels.slice(0, 6).map((parcel, idx) => (
+                  <tr 
+                    key={parcel.slug} 
+                    className="hover:bg-slate-50 transition-all group cursor-pointer animate-in fade-in"
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                    onClick={() => navigate(`/shipments/${parcel.trackingId}`)}
+                  >
+                    <td className="px-10 py-6">
+                      <div className="flex items-center gap-4">
+                         <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#F97316] group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                            <Package className="w-5 h-5" />
                          </div>
-                         <span className="font-brand font-bold text-slate-900 group-hover:text-[#F97316] transition-colors">{parcel.trackingId}</span>
+                         <div>
+                            <span className="font-brand font-bold text-slate-900 text-lg block">{parcel.trackingId}</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID Verified</span>
+                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tighter
-                          ${parcel.currentStatus === ParcelStatus.DELIVERED ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                    <td className="px-10 py-6">
+                      <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest
+                          ${parcel.currentStatus === ParcelStatus.DELIVERED ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
                           parcel.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-500/10 text-sky-600 border border-sky-500/20' :
                           parcel.currentStatus === ParcelStatus.ARRIVED ? 'bg-[#F97316]/10 text-[#F97316] border border-[#F97316]/20' :
                             'bg-slate-100 text-slate-500 border border-slate-200'}
                        `}>
-                        {parcel.currentStatus === ParcelStatus.DELIVERED && <CheckCircle className="w-3 h-3 mr-1.5" />}
                         {parcel.currentStatus.toLowerCase().replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-8 py-5">
-                       <div className="flex items-center text-xs font-brand text-slate-500">
-                          <span className="text-slate-600">{parcel.sourceOfficeTitle || parcel.sourceOfficeId}</span>
-                          <ArrowRight className="w-3 h-3 mx-2 text-slate-500" />
-                          <span className="text-slate-900 font-bold">{parcel.destinationOfficeTitle || parcel.destinationOfficeId}</span>
+                    <td className="px-10 py-6">
+                       <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-slate-500">{parcel.sourceOfficeTitle || parcel.sourceOfficeId}</span>
+                          <div className="h-px w-8 bg-slate-200"></div>
+                          <span className="text-xs font-bold text-slate-900 bg-orange-50 px-3 py-1 rounded-lg border border-orange-100">{parcel.destinationOfficeTitle || parcel.destinationOfficeId}</span>
                        </div>
                     </td>
-                    <td className="px-8 py-5 font-brand font-bold text-slate-900">${parcel.price}</td>
-                    <td className="px-8 py-5 text-xs text-slate-500 font-brand">{new Date(parcel.createdAt).toLocaleDateString()}</td>
+                    <td className="px-10 py-6 text-xs text-slate-400 font-bold font-brand">{new Date(parcel.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User, Office, Parcel, ParcelStatus, TrackingEvent, UserRole, NotificationLog, PaymentMode } from '../types';
+import { User, Office, Parcel, ParcelStatus, TrackingEvent, UserRole, NotificationLog, PaymentMode, Bus } from '../types';
 import { fetchHealth, fetchBranches, loginOrganization, loginBranch, logoutUser, createApiClient } from '../services/apiService';
 import { jwtDecode } from 'jwt-decode';
 import { useMemo } from 'react';
@@ -11,6 +11,7 @@ interface AppContextType {
   currentUser: User | null;
   organization: any | null;
   offices: Office[];
+  buses: Bus[];
   parcels: Parcel[];
   notifications: NotificationLog[];
   loading: boolean;
@@ -19,6 +20,9 @@ interface AppContextType {
   addOffice: (officeData: { name: string, password?: string }) => Promise<{ success: boolean, message: string }>;
   deleteOffice: (officeId: string) => Promise<{ success: boolean, message: string }>;
   fetchAdminBranches: () => Promise<void>;
+  addBus: (busData: { busNumber: string, preferredDays: number[], description?: string }) => Promise<{ success: boolean, message: string }>;
+  deleteBus: (busSlug: string) => Promise<{ success: boolean, message: string }>;
+  fetchBuses: () => Promise<void>;
   createParcel: (parcel: any) => Promise<{ success: boolean, message: string, data?: any }>;
   updateParcelStatus: (trackingId: string, newStatus: ParcelStatus, note?: string) => Promise<{ success: boolean, message: string }>;
   fetchParcels: () => Promise<void>;
@@ -38,6 +42,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [organization, setOrganization] = useState<any | null>(null);
   const [offices, setOffices] = useState<Office[]>([]);
+  const [buses, setBuses] = useState<Bus[]>([]);
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [notifications, setNotifications] = useState<NotificationLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -276,6 +281,56 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const fetchBuses = useCallback(async () => {
+    try {
+      const data = await api.get('/bus/list/');
+      if (data.status === 200 && data.data) {
+        const mapped = data.data.map((b: any) => ({
+          slug: b.slug,
+          busNumber: b.bus_number,
+          preferredDays: b.preferred_days || [],
+          description: b.description
+        }));
+        setBuses(mapped);
+      }
+    } catch (e) {
+      console.error("Failed to fetch buses:", e);
+      setBuses([]);
+    }
+  }, [api]);
+
+  const addBus = async (busData: { busNumber: string, preferredDays: number[], description?: string }) => {
+    try {
+      const data = await api.post('/bus/add/', {
+        bus_number: busData.busNumber,
+        preferred_days: busData.preferredDays,
+        description: busData.description || null
+      });
+
+      if (data.status === 200 && data.data) {
+        await fetchBuses();
+        return { success: true, message: data.message || 'Bus created successfully' };
+      }
+      return { success: false, message: data.message || data.error || 'Creation failed' };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error occurred' };
+    }
+  };
+
+  const deleteBus = async (busSlug: string) => {
+    try {
+      // Note: We might need to add a delete endpoint, but for now let's assume it exists
+      const data = await api.delete(`/bus/${busSlug}/delete/`);
+      if (data.status === 200 || data.status_code === 200) {
+        await fetchBuses();
+        return { success: true, message: 'Bus deleted successfully' };
+      }
+      return { success: false, message: data.message || 'Deletion failed' };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error occurred' };
+    }
+  };
+
   const getOfficeName = (id: string) => offices.find(o => o.id === id)?.name || 'Unknown Office';
 
   const fetchParcels = useCallback(async () => {
@@ -313,6 +368,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           paymentMode: s.payment_mode as PaymentMode,
           price: Number(s.price),
           currentStatus: s.current_status as ParcelStatus,
+          bus: s.bus ? {
+            slug: s.bus.slug,
+            busNumber: s.bus.bus_number,
+            preferredDays: s.bus.preferred_days || [],
+            description: s.bus.description
+          } : undefined,
           history: (s.history || []).map((h: any) => ({
             status: h.status as ParcelStatus,
             timestamp: new Date(h.created_at).getTime(),
@@ -343,12 +404,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         description: data.description,
         price: data.price,
         payment_mode: data.paymentMode,
-        destination_branch_slug: data.destinationOfficeId // Backend expects destination_branch_slug
+        destination_branch_slug: data.destinationOfficeId, // Backend expects destination_branch_slug
+        bus_slug: data.busSlug || null // Include bus slug if provided
       });
 
       if (resp.status === 201 && resp.data) {
         await fetchParcels();
-        const s = resp.data;
+        // Response now includes shipment and available_buses
+        // resp.data is { shipment: {...}, available_buses: [...] }
+        const responseData = resp.data;
+        const s = responseData.shipment || responseData; // Handle both old and new format
+        const availableBuses = responseData.available_buses || [];
+        
+        // Debug logging
+        console.log("Shipment creation response:", resp);
+        console.log("Response data:", responseData);
+        console.log("Available buses from response:", availableBuses);
         const newParcel: Parcel = {
           slug: s.slug,
           trackingId: s.tracking_id,
@@ -365,6 +436,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           paymentMode: s.payment_mode as PaymentMode,
           price: Number(s.price),
           currentStatus: s.current_status as ParcelStatus,
+          bus: s.bus ? {
+            slug: s.bus.slug,
+            busNumber: s.bus.bus_number,
+            preferredDays: s.bus.preferred_days || [],
+            description: s.bus.description
+          } : undefined,
           history: (s.history || []).map((h: any) => ({
             status: h.status as ParcelStatus,
             timestamp: new Date(h.created_at).getTime(),
@@ -377,7 +454,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         // Send fake SMS notifications
         sendFakeSMS('Sender', data.senderPhone, `Your parcel to ${data.receiverName} is booked! Tracking ID: ${s.tracking_id}`);
         sendFakeSMS('Receiver', data.receiverPhone, `A parcel from ${data.senderName} has been booked. Tracking ID: ${s.tracking_id}`);
-        return { success: true, message: 'Parcel booked successfully', data: newParcel };
+        
+        // Map available buses to frontend format
+        const mappedBuses = availableBuses.map((b: any) => ({
+          slug: b.slug,
+          busNumber: b.bus_number,
+          preferredDays: b.preferred_days || [],
+          description: b.description
+        }));
+        
+        console.log("Mapped buses for frontend:", mappedBuses);
+        
+        return { 
+          success: true, 
+          message: 'Parcel booked successfully', 
+          data: newParcel,
+          availableBuses: mappedBuses
+        };
       }
       return { success: false, message: resp.message || resp.error || 'Booking failed' };
     } catch (e: any) {
@@ -420,6 +513,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       currentUser,
       organization,
       offices,
+      buses,
       parcels,
       notifications,
       loading,
@@ -428,6 +522,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addOffice,
       deleteOffice,
       fetchAdminBranches,
+      addBus,
+      deleteBus,
+      fetchBuses,
       fetchParcels,
       createParcel,
       updateParcelStatus,
@@ -456,6 +553,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   paymentMode: s.payment_mode as PaymentMode,
                   price: Number(s.price),
                   currentStatus: s.current_status as ParcelStatus,
+                  bus: s.bus ? {
+                    slug: s.bus.slug,
+                    busNumber: s.bus.bus_number,
+                    preferredDays: s.bus.preferred_days || [],
+                    description: s.bus.description
+                  } : undefined,
                   history: (s.history || []).map((h: any) => ({
                     status: h.status as ParcelStatus,
                     timestamp: new Date(h.created_at).getTime(),
@@ -494,6 +597,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   paymentMode: s.payment_mode as PaymentMode,
                   price: Number(s.price),
                   currentStatus: s.current_status as ParcelStatus,
+                  bus: s.bus ? {
+                    slug: s.bus.slug,
+                    busNumber: s.bus.bus_number,
+                    preferredDays: s.bus.preferred_days || [],
+                    description: s.bus.description
+                  } : undefined,
                   history: (s.history || []).map((h: any) => ({
                     status: h.status as ParcelStatus,
                     timestamp: new Date(h.created_at).getTime(),

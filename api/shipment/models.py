@@ -4,19 +4,17 @@ from django.db import models
 
 from django.db import models
 from core.models import BaseModel
-from organization.models import Organization, Branch
+from organization.models import Organization, Branch, Bus
 import random
 import string
 
-def generate_tracking_id():
-    return f"TRK-{''.join(random.choices(string.digits, k=6))}"
+def generate_tracking_id(prefix="TRK"):
+    return f"{prefix}-{''.join(random.choices(string.digits, k=6))}"
 
 class ShipmentStatus(models.TextChoices):
     BOOKED = 'BOOKED', 'Booked'
     IN_TRANSIT = 'IN_TRANSIT', 'In Transit'
     ARRIVED = 'ARRIVED', 'Arrived at Destination'
-    DELIVERED = 'DELIVERED', 'Delivered'
-    CANCELLED = 'CANCELLED', 'Cancelled'
 
 class PaymentMode(models.TextChoices):
     SENDER_PAYS = 'SENDER_PAYS', 'Prepaid (Sender)'
@@ -27,6 +25,7 @@ class Shipment(BaseModel):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='shipments')
     source_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='outgoing_shipments')
     destination_branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='incoming_shipments')
+    bus = models.ForeignKey(Bus, on_delete=models.SET_NULL, null=True, blank=True, related_name='shipments')
     
     sender_name = models.CharField(max_length=100)
     sender_phone = models.CharField(max_length=20)

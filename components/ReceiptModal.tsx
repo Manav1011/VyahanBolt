@@ -35,24 +35,25 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ parcel, sourceOffice, desti
             <head>
               <title>Bill of Supply - ${parcel.trackingId}</title>
               <style>
-                @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
                 body {
-                  font-family: 'Courier Prime', monospace;
+                  font-family: 'Inter', system-ui, -apple-system, sans-serif;
                   width: 300px;
                   margin: 0;
                   padding: 10px;
                   font-size: 13px;
-                  line-height: 1.2;
+                  line-height: 1.3;
                   color: #000;
                   background: #fff;
+                  -webkit-font-smoothing: antialiased;
                 }
-                .header { text-align: center; margin-bottom: 8px; font-weight: normal; }
-                .divider { border-bottom: 2px dotted #000; margin: 10px 0; }
-                .title { text-align: center; font-weight: bold; font-size: 16px; margin: 8px 0; }
-                .row { display: flex; margin-bottom: 4px; align-items: flex-start; }
-                .label { width: 105px; flex-shrink: 0; }
-                .val { flex: 1; font-weight: bold; white-space: pre-wrap; word-break: break-word; }
-                .footer { margin-top: 15px; font-size: 11px; border-top: 1px solid #000; padding-top: 8px; line-height: 1.4; }
+                .header { text-align: center; margin-bottom: 8px; font-weight: 600; font-size: 12px; }
+                .divider { border-bottom: 1.5px dotted #000; margin: 8px 0; }
+                .title { text-align: center; font-weight: 800; font-size: 15px; margin: 5px 0; letter-spacing: 0.5px; }
+                .row { display: flex; margin-bottom: 5px; align-items: flex-start; }
+                .label { width: 110px; flex-shrink: 0; font-weight: 400; }
+                .val { flex: 1; font-weight: 600; white-space: pre-wrap; word-break: break-word; }
+                .footer { margin-top: 15px; font-size: 10px; border-top: 1px solid #000; padding-top: 8px; line-height: 1.4; font-weight: 400; }
                 @media print {
                   @page { margin: 0; size: auto; }
                   body { padding: 0.5cm; }
@@ -108,9 +109,9 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ parcel, sourceOffice, desti
 
                 <div className="p-6 overflow-y-auto bg-slate-100 flex justify-center">
                     {/* Thermal Receipt Preview Area */}
-                    <div ref={printRef} className="bg-white p-6 shadow-sm w-[300px] font-['Courier_Prime'] text-[13px] text-black leading-tight border border-slate-200">
-                        <div className="header uppercase">
-                            {sourceOffice?.name || "LOGITRACK OFFICE"}<br />
+                    <div ref={printRef} className="bg-white p-6 shadow-sm w-[300px] font-['Inter'] text-[13px] text-black leading-snug border border-slate-200">
+                        <div className="header" style={{ fontSize: '11px', fontWeight: 600 }}>
+                            {sourceOffice?.name.toUpperCase() || "KHETWADI"} 4TH STREET SVP ROAD MUMBAI<br />
                             MOB: 9879984646
                         </div>
 
@@ -120,66 +121,61 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({ parcel, sourceOffice, desti
 
                         <div className="row">
                             <span className="label">Txn ID</span>
-                            <span className="val">: {parcel.trackingId.replace('TRK-', '')}</span>
+                            <span className="val"> : {parcel.trackingId}</span>
                         </div>
                         <div className="row">
                             <span className="label">Date</span>
-                            <span className="val">: {formatDate(parcel.createdAt)}</span>
+                            <span className="val"> : {formatDate(parcel.createdAt)}</span>
                         </div>
                         <div className="row">
                             <span className="label">Booking Dt</span>
-                            <span className="val">: {formatDateTime(parcel.createdAt)}</span>
+                            <span className="val"> : {formatDateTime(parcel.createdAt)}</span>
                         </div>
 
                         <div className="row">
                             <span className="label">To Party</span>
-                            <span className="val">: {parcel.receiverName.toUpperCase()}</span>
+                            <span className="val"> : {parcel.receiverName.toUpperCase()}</span>
                         </div>
                         <div className="row">
                             <span className="label">Phone No.</span>
-                            <span className="val">: {parcel.receiverPhone}</span>
+                            <span className="val"> : {parcel.receiverPhone}</span>
                         </div>
                         <div className="row">
                             <span className="label">To City</span>
-                            <span className="val">: {parcel.destinationOfficeTitle?.toUpperCase() || destinationOffice?.name.toUpperCase()}</span>
+                            <span className="val"> : {parcel.destinationOfficeTitle?.toUpperCase() || destinationOffice?.name.toUpperCase()}</span>
                         </div>
 
                         <div className="row">
                             <span className="label">From Party</span>
-                            <span className="val">: {parcel.senderName.toUpperCase()}</span>
+                            <span className="val"> : {parcel.senderName.toUpperCase()}</span>
                         </div>
                         <div className="row">
                             <span className="label">From City</span>
-                            <span className="val">: {parcel.sourceOfficeTitle?.toUpperCase() || sourceOffice?.name.toUpperCase()}</span>
+                            <span className="val"> : {parcel.sourceOfficeTitle?.toUpperCase() || sourceOffice?.name.toUpperCase()}</span>
                         </div>
 
                         <div className="row">
-                            <span className="label">Des.Of Goods</span>
-                            <span className="val">: {parcel.description.toUpperCase()}</span>
-                        </div>
-                        <div className="row">
-                            <span className="label">Quantity</span>
-                            <span className="val">: 1</span>
+                            <span className="label">Des. Of Goods</span>
+                            <span className="val"> : {parcel.description.toUpperCase()}</span>
                         </div>
 
                         <div className="row" style={{ marginTop: '10px' }}>
                             <span className="label" style={{ fontWeight: 'bold', fontSize: '15px' }}>Amount</span>
-                            <span className="val" style={{ fontSize: '15px' }}>: {Number(parcel.price).toFixed(1)}</span>
+                            <span className="val" style={{ fontSize: '15px', fontWeight: 'bold' }}> : {Number(parcel.price).toFixed(2)}</span>
                         </div>
                         <div className="row" style={{ marginTop: '10px' }}>
                             <span className="label" style={{ fontWeight: 'bold' }}>Payment</span>
-                            <span className="val">: {parcel.paymentMode === PaymentMode.RECEIVER_PAYS ? 'TO PAY' : 'PAID'}</span>
+                            <span className="val"> : {parcel.paymentMode === PaymentMode.RECEIVER_PAYS ? 'TO PAY' : 'PAID'}</span>
                         </div>
 
                         <div className="row" style={{ marginTop: '10px' }}>
                             <span className="label">Operator</span>
-                            <span className="val">: {user?.name.split(' ')[0].toUpperCase() || 'SUN'}</span>
+                            <span className="val"> : {user?.name.split(' ')[0].toUpperCase() || 'SUN'}</span>
                         </div>
 
                         <div className="footer">
-                            * We are not responsible for any damage or breakage of glass/liquid items.<br />
-                            * Claim for more than Rs. 50 requires insurance.<br />
-                            * Goods are transported at owner's risk.
+                            * We are not responsible for any of your valuable goods.<br />
+                            * Claim for more than Rs. 500/- will not be accepted.
                         </div>
                     </div>
                 </div>

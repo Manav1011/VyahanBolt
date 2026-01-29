@@ -2,8 +2,9 @@ from django_bolt import BoltAPI, Depends
 from core.utils import response, get_current_user, jwt_auth
 from organization.middleware import OrganizationMiddleware
 from .serializers import ShipmentSerializer, ShipmentCreateSerializer, ShipmentStatusUpdateSerializer
-from .models import Shipment, ShipmentHistory, ShipmentStatus
-from organization.models import Branch
+from .models import Shipment, ShipmentHistory, ShipmentStatus, generate_tracking_id
+from organization.models import Branch, Bus
+from organization.serializers import BusSerializer
 from core.sms_service import async_send_sms
 from django.db.models import Q
 from django_bolt.auth import IsAuthenticated, HasPermission
@@ -51,11 +52,32 @@ async def create_shipment(request, credentials: ShipmentCreateSerializer, user=D
             error="Invalid destination branch slug"
         )
     
+    # Get bus if bus_slug is provided
+    bus = None
+    if credentials.bus_slug:
+        try:
+            bus = await Bus.objects.aget(
+                slug=credentials.bus_slug,
+                organization=organization
+            )
+        except Bus.DoesNotExist:
+            return response(
+                status=404,
+                message="Bus not found",
+                error="Invalid bus slug"
+            )
+    
+    # Generate tracking ID based on destination branch prefix (first letter)
+    prefix = destination_branch.title[0].upper() if destination_branch.title else "X"
+    shipment_tracking_id = generate_tracking_id(prefix)
+    
     # Create the shipment
     shipment = await Shipment.objects.acreate(
+        tracking_id=shipment_tracking_id,
         organization=organization,
         source_branch=source_branch,
         destination_branch=destination_branch,
+        bus=bus,
         sender_name=credentials.sender_name,
         sender_phone=credentials.sender_phone,
         receiver_name=credentials.receiver_name,
@@ -78,10 +100,26 @@ async def create_shipment(request, credentials: ShipmentCreateSerializer, user=D
     shipment_with_related = await Shipment.objects.select_related(
         'source_branch__owner',
         'destination_branch__owner',
-        'organization'
+        'organization',
+        'bus'
     ).prefetch_related('history').aget(pk=shipment.pk)
     
     shipment_serialized = ShipmentSerializer.fields("detail").from_model(shipment_with_related)
+    
+    # Get all buses for the organization (not just today's available ones)
+    # Frontend will handle highlighting buses available today
+    from datetime import datetime
+    current_day = datetime.now().weekday() + 1  # Monday=1, Sunday=7
+    all_buses = []
+    async for bus in Bus.objects.filter(organization=organization):
+        bus_serialized = BusSerializer.fields("list").from_model(bus)
+        all_buses.append(bus_serialized)
+    
+    # Add all buses to response data
+    response_data = {
+        "shipment": shipment_serialized,
+        "available_buses": all_buses  # All buses, frontend will filter/highlight
+    }
     
     # Send SMS Notifications
     try:
@@ -114,7 +152,7 @@ async def create_shipment(request, credentials: ShipmentCreateSerializer, user=D
     return response(
         status=201,
         message="Shipment booked successfully",
-        data=shipment_serialized
+        data=response_data
     )
 
 @api.get("/shipment/list/", auth=[jwt_auth], guards=[IsAuthenticated(), HasPermission("organization.is_organization_admin")])
@@ -136,7 +174,8 @@ async def list_shipments_organization(request):
     async for shipment in Shipment.objects.select_related(
         'source_branch__owner',
         'destination_branch__owner',
-        'organization'
+        'organization',
+        'bus'
     ).prefetch_related('history').filter(organization=organization):
         shipment_serialized = ShipmentSerializer.fields("list").from_model(shipment)
         shipments.append(shipment_serialized)
@@ -183,7 +222,8 @@ async def list_shipments_branch(request, user=Depends(get_current_user)):
     async for shipment in Shipment.objects.select_related(
         'source_branch__owner',
         'destination_branch__owner',
-        'organization'
+        'organization',
+        'bus'
     ).prefetch_related('history').filter(
         Q(source_branch=branch) | Q(destination_branch=branch),
         organization=organization
@@ -211,7 +251,8 @@ async def retrieve_shipment(request, tracking_id: str, user=Depends(get_current_
         shipment = await Shipment.objects.select_related(
             'source_branch__owner',
             'destination_branch__owner',
-            'organization'
+            'organization',
+            'bus'
         ).prefetch_related('history').aget(
             tracking_id=tracking_id,
             organization=organization
@@ -273,7 +314,8 @@ async def update_shipment_status(request, tracking_id: str, credentials: Shipmen
         shipment = await Shipment.objects.select_related(
             'source_branch',
             'destination_branch',
-            'organization'
+            'organization',
+            'bus'
         ).aget(
             tracking_id=tracking_id,
             organization=organization
@@ -310,7 +352,8 @@ async def update_shipment_status(request, tracking_id: str, credentials: Shipmen
     shipment_with_related = await Shipment.objects.select_related(
         'source_branch__owner',
         'destination_branch__owner',
-        'organization'
+        'organization',
+        'bus'
     ).prefetch_related('history').aget(pk=shipment.pk)
     
     shipment_serialized = ShipmentSerializer.fields("detail").from_model(shipment_with_related)
@@ -329,7 +372,8 @@ async def track_shipment(request, tracking_id: str):
     query = Shipment.objects.select_related(
         'source_branch__owner',
         'destination_branch__owner',
-        'organization'
+        'organization',
+        'bus'
     ).prefetch_related('history').filter(tracking_id=tracking_id)
     
     if organization:

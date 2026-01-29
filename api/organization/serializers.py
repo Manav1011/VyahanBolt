@@ -71,3 +71,22 @@ class BranchCreateSerializer(Serializer):
     description: str = None
     metadata: dict = None
     password: Annotated[str, Meta(min_length=8)]
+
+class BusSerializer(Serializer):
+    slug: str
+    bus_number: str
+    preferred_days: list[int]
+    description: str | None
+    metadata: dict | None
+    
+    class Config:
+        field_sets = {
+            "list": ["slug", "bus_number", "preferred_days"],
+            "detail": ["slug", "bus_number", "preferred_days", "description", "metadata"],
+        }
+
+class BusCreateSerializer(Serializer):
+    bus_number: Annotated[str, Meta(min_length=1, max_length=50)]
+    preferred_days: Annotated[list[int], Meta(description="List of preferred days (1=Monday, 7=Sunday)")]
+    description: str | None = None
+    metadata: dict | None = None

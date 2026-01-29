@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { PaymentMode } from '../types';
-import { ArrowRight, MapPin, User, Package, CreditCard, Save } from 'lucide-react';
+import { PaymentMode, Bus } from '../types';
+import { ArrowRight, MapPin, User, Package, CreditCard, Save, Bus as BusIcon, Calendar } from 'lucide-react';
 import ReceiptModal from '../components/ReceiptModal';
+import BusSelectionModal from '../components/BusSelectionModal';
+import { createApiClient } from '../services/apiService';
 
 const InputGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
     <div className="space-y-2">
@@ -48,6 +50,7 @@ const PhoneInput = ({ value, onChange, countryCode, setCountryCode }: any) => {
 
 export const BookParcel: React.FC = () => {
     const { offices, currentUser, createParcel } = useApp();
+    const api = createApiClient();
 
     const [form, setForm] = useState({
         senderName: '',
@@ -58,6 +61,7 @@ export const BookParcel: React.FC = () => {
         description: '',
         price: '',
         paymentMode: PaymentMode.SENDER_PAYS,
+        busSlug: '',
     });
 
     const sourceOffice = offices.find(o => o.id === currentUser?.officeId);
@@ -68,6 +72,49 @@ export const BookParcel: React.FC = () => {
     const [senderCountry, setSenderCountry] = useState('+91');
     const [receiverCountry, setReceiverCountry] = useState('+91');
     const [showReceipt, setShowReceipt] = useState(false);
+    const [availableBuses, setAvailableBuses] = useState<Bus[]>([]);
+    const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
+    const [showBusModal, setShowBusModal] = useState(false);
+    const [loadingBuses, setLoadingBuses] = useState(false);
+
+    // Fetch all buses in organization on component mount (not dependent on destination)
+    useEffect(() => {
+        const fetchBuses = async () => {
+            setLoadingBuses(true);
+            try {
+                // Fetch all buses in the organization
+                const res = await api.get('/bus/list/');
+                if (res.status === 200 && res.data) {
+                    const mappedBuses = res.data.map((b: any) => ({
+                        slug: b.slug,
+                        busNumber: b.bus_number,
+                        preferredDays: b.preferred_days || [],
+                        description: b.description
+                    }));
+                    setAvailableBuses(mappedBuses);
+                    
+                    // Auto-select bus matching today's day (default selection)
+                    const today = new Date().getDay();
+                    const currentDay = today === 0 ? 7 : today; // Convert to 1=Monday, 7=Sunday
+                    const defaultBus = mappedBuses.find((bus: Bus) => 
+                        bus.preferredDays && bus.preferredDays.includes(currentDay)
+                    ) || mappedBuses[0]; // Fallback to first bus if none match today
+                    
+                    if (defaultBus) {
+                        setSelectedBus(defaultBus);
+                        setForm(prev => ({ ...prev, busSlug: defaultBus.slug }));
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch buses:", e);
+                setAvailableBuses([]);
+            } finally {
+                setLoadingBuses(false);
+            }
+        };
+        
+        fetchBuses();
+    }, []); // Empty dependency array - fetch once on mount
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -75,6 +122,11 @@ export const BookParcel: React.FC = () => {
         // Validation
         if (!form.destinationOfficeId) {
             alert("Please select a valid destination node");
+            return;
+        }
+
+        if (!form.busSlug) {
+            alert("Please select a bus for this shipment");
             return;
         }
 
@@ -99,26 +151,13 @@ export const BookParcel: React.FC = () => {
             description: form.description,
             price: Number(form.price),
             paymentMode: form.paymentMode,
+            busSlug: form.busSlug, // Include bus selection
         });
 
         setIsLoading(false);
 
         if (res.success) {
-            // Store tracking ID for the success modal
-            // Assuming res.data contains the new parcel object with trackingId
-            // If createParcel doesn't return data, we might need to adjust AppContext
-            // But usually API returns it. AppContext.createParcel return message is generic string mostly,
-            // let's check AppContext. If it doesn't return ID, we can't show it easily.
-            // Wait, AppContext createParcel returns { success, message }. It logic updates list.
-            // I should update AppContext to return the created data if possible, or parse it from message (bad).
-            // Actually, in AppContext.tsx:
-            // return { success: true, message: 'Parcel booked successfully' };
-            // I need to update AppContext to return the data first!
-            
-            // For now, I will optimistically check if I can get it. 
-            // NOTE: I am making a change to AppContext in the NEXT step to enforce this.
-            // Assuming res.data exists:
-            setSuccessData(res.data || { trackingId: 'Generating...' }); 
+            setSuccessData(res.data || { trackingId: 'Generating...' });
             
             setForm({
                 senderName: '',
@@ -129,7 +168,10 @@ export const BookParcel: React.FC = () => {
                 description: '',
                 price: '',
                 paymentMode: PaymentMode.SENDER_PAYS,
+                busSlug: '',
             });
+            setSelectedBus(null);
+            setAvailableBuses([]);
         } else {
             alert(res.message);
         }
@@ -161,7 +203,7 @@ export const BookParcel: React.FC = () => {
                     <div className="flex flex-col md:flex-row gap-8 items-center bg-slate-50 p-8 rounded-2xl border border-slate-100">
                         <div className="flex-1 w-full scale-105">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">From (Origin)</span>
-                            <div className="text-2xl font-brand font-bold text-slate-900">{sourceOffice?.city}</div>
+                            <div className="text-2xl font-brand font-bold text-slate-900">{sourceOffice?.name || sourceOffice?.city}</div>
                             <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter mt-1 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 w-fit">Status: Online</div>
                         </div>
                         <div className="bg-[#F97316]/20 p-3 rounded-full border border-[#F97316]/30 orange-glow">
@@ -183,6 +225,61 @@ export const BookParcel: React.FC = () => {
                             </InputGroup>
                         </div>
                     </div>
+
+                    {/* Bus Selection */}
+                    <div className="mt-6 pt-6 border-t border-slate-200">
+                        <InputGroup label="Select Bus">
+                                {loadingBuses ? (
+                                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                                        <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-sm text-slate-600">Loading buses...</span>
+                                    </div>
+                                ) : availableBuses.length > 0 ? (
+                                    <div className="space-y-3">
+                                        <select
+                                            required
+                                            className="w-full p-4 bg-white/50 border border-slate-200 rounded-2xl text-sm font-brand font-bold text-slate-900 outline-none focus:border-[#F97316]/50 transition-all cursor-pointer hover:bg-white"
+                                            value={form.busSlug}
+                                            onChange={e => {
+                                                const bus = availableBuses.find(b => b.slug === e.target.value);
+                                                setSelectedBus(bus || null);
+                                                setForm({ ...form, busSlug: e.target.value });
+                                            }}
+                                        >
+                                            <option value="" className="bg-white text-slate-900">Select Bus...</option>
+                                            {availableBuses.map(bus => {
+                                                const today = new Date().getDay();
+                                                const currentDay = today === 0 ? 7 : today;
+                                                const isAvailableToday = bus.preferredDays.includes(currentDay);
+                                                return (
+                                                    <option key={bus.slug} value={bus.slug} className="bg-white text-slate-900">
+                                                        Bus {bus.busNumber} {isAvailableToday ? '(Available Today)' : ''}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                        {selectedBus && (
+                                            <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-xl border border-orange-200">
+                                                <BusIcon className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                                                <div className="flex-1">
+                                                    <p className="text-xs font-bold text-slate-900">Bus {selectedBus.busNumber}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Calendar className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                                                        <p className="text-[10px] text-slate-600">
+                                                            Operating Days: {selectedBus.preferredDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1]).join(', ')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                                        <p className="text-sm text-slate-500">No buses registered in the organization</p>
+                                    </div>
+                                )}
+                            </InputGroup>
+                        </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

@@ -52,8 +52,8 @@ export const ShipmentDetails: React.FC = () => {
         </div>
         <div className="ml-auto">
            <span className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border 
-              ${shipment.currentStatus === ParcelStatus.DELIVERED ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
-                shipment.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-50 text-sky-600 border-sky-200' : 
+              ${shipment.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-50 text-sky-600 border-sky-200' : 
+                shipment.currentStatus === ParcelStatus.ARRIVED ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
                 'bg-orange-50 text-orange-600 border-orange-200'}`}>
               {shipment.currentStatus.replace('_', ' ')}
            </span>

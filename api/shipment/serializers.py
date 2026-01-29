@@ -7,6 +7,11 @@ class BranchMinimalSerializer(Serializer):
     slug: str
     title: str
 
+class BusMinimalSerializer(Serializer):
+    slug: str
+    bus_number: str
+    preferred_days: list[int]
+
 class ShipmentHistorySerializer(Serializer):
     status: str
     location: str
@@ -26,6 +31,7 @@ class ShipmentSerializer(Serializer):
     current_status: str
     source_branch: Annotated[BranchMinimalSerializer, Nested(BranchMinimalSerializer)]
     destination_branch: Annotated[BranchMinimalSerializer, Nested(BranchMinimalSerializer)]
+    bus: Annotated[BusMinimalSerializer | None, Nested(BusMinimalSerializer)] = None
     history: Annotated[list[ShipmentHistorySerializer], Nested(ShipmentHistorySerializer, many=True)]
     created_at: str
     
@@ -35,13 +41,13 @@ class ShipmentSerializer(Serializer):
                 "slug", "tracking_id", "sender_name", "sender_phone",
                 "receiver_name", "receiver_phone", "description",
                 "price", "payment_mode", "current_status",
-                "source_branch", "destination_branch", "history", "created_at"
+                "source_branch", "destination_branch", "bus", "history", "created_at"
             ],
             "detail": [
                 "slug", "tracking_id", "sender_name", "sender_phone", 
                 "receiver_name", "receiver_phone", "description", 
                 "price", "payment_mode", "current_status", 
-                "source_branch", "destination_branch", "history", "created_at"
+                "source_branch", "destination_branch", "bus", "history", "created_at"
             ],
         }
 
@@ -54,6 +60,7 @@ class ShipmentCreateSerializer(Serializer):
     price: Annotated[float, Meta(gt=0)]
     payment_mode: str = PaymentMode.SENDER_PAYS
     destination_branch_slug: Annotated[str, Meta(min_length=1)]
+    bus_slug: str | None = None
     # Note: source_branch is automatically determined from authenticated user's branch
 
 class ShipmentStatusUpdateSerializer(Serializer):

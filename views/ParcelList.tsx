@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ParcelStatus, UserRole, Parcel } from '../types';
-import { Truck, MapPin, CheckCircle, ArrowRight, Printer } from 'lucide-react';
+import { Truck, MapPin, CheckCircle, ArrowRight, Printer, Package } from 'lucide-react';
 import ReceiptModal from '../components/ReceiptModal';
 import { useNavigate } from 'react-router-dom';
 
@@ -104,86 +104,113 @@ export const ParcelList: React.FC = () => {
                </div>
             );
          }
-         if (parcel.currentStatus === ParcelStatus.ARRIVED) {
-            return (
-               <div className="flex gap-2 justify-end">
-                  {printBtn}
-                  <ActionButton onClick={async () => {
-                     const res = await updateParcelStatus(parcel.trackingId, ParcelStatus.DELIVERED, "Delivered to customer");
-                     if (!res.success) alert(res.message);
-                  }} colorClass="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20" icon={CheckCircle} label="Deliver" />
-               </div>
-            );
-         }
          return <div className="flex justify-end">{printBtn}</div>;
       }
       return <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-4">Terminal Exit</span>;
    };
 
    return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-         <div className="flex justify-between items-end">
-            <div>
-               <h2 className="text-3xl font-brand font-bold text-slate-900 tracking-tight">Shipment Management</h2>
-               <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-brand mt-1 uppercase">All Active Parcels</p>
+      <div className="space-y-8 animate-in fade-in duration-700">
+         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-orange-500/5 rounded-full blur-3xl"></div>
+            <div className="relative z-10">
+               <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-brand">Operational Stream</span>
+               </div>
+               <h2 className="text-4xl font-brand font-bold text-slate-900 tracking-tight">Shipment Manifest</h2>
+               <p className="text-slate-500 text-sm font-medium mt-1">Real-time tracking and management of all active logistics units.</p>
             </div>
-            <div className="text-[10px] font-bold text-slate-500 glass px-4 py-2 rounded-xl uppercase tracking-widest border border-slate-200 font-brand bg-white/50">
-               Active Records: {myParcels.length}
+            <div className="relative z-10 bg-slate-900 text-white px-6 py-4 rounded-2xl flex flex-col items-center justify-center min-w-[140px] shadow-lg shadow-slate-900/20">
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Packets</span>
+               <span className="text-3xl font-brand font-bold">{myParcels.length}</span>
             </div>
          </div>
 
-         <div className="glass border border-slate-200 rounded-2xl overflow-hidden shadow-sm bg-white">
+         <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl">
             {myParcels.length === 0 ? (
-               <div className="p-20 text-center">
-                   <Truck className="w-12 h-12 text-slate-700 mx-auto mb-4 opacity-20" />
-                  <p className="text-slate-500 font-brand italic text-sm">Waiting for incoming data packets...</p>
+               <div className="py-32 text-center">
+                   <div className="w-24 h-24 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-slate-200">
+                      <Truck className="w-10 h-10 text-slate-300" />
+                   </div>
+                  <h3 className="text-xl font-bold font-brand text-slate-800 mb-2">Manifest Baseline Nominal</h3>
+                  <p className="text-slate-500 max-w-xs mx-auto text-sm leading-relaxed italic">The logistics stream is currently clear of active data packets.</p>
                </div>
             ) : (
-               <table className="w-full text-left">
+               <div className="overflow-x-auto">
+               <table className="w-full text-left border-collapse">
                   <thead>
                      <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-
-                        <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand">Parcel Details</th>
-                        <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand">Route</th>
-                        <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand">Status</th>
-                        <th className="px-8 py-4 text-[10px] font-bold uppercase tracking-widest font-brand text-right">Actions</th>
+                        <th className="px-10 py-6 text-[10px] font-bold uppercase tracking-widest font-brand">Shipment Details</th>
+                        <th className="px-10 py-6 text-[10px] font-bold uppercase tracking-widest font-brand">Logistics Vector</th>
+                        <th className="px-10 py-6 text-[10px] font-bold uppercase tracking-widest font-brand">Operational Status</th>
+                        <th className="px-10 py-6 text-[10px] font-bold uppercase tracking-widest font-brand text-right">Mission Control</th>
                      </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-slate-100">
-                     {myParcels.map(parcel => (
-                        <tr key={parcel.slug} className="hover:bg-slate-50 transition-all group">
-                           <td className="px-8 py-6 align-top">
-                              <div onClick={() => navigate(`/shipments/${parcel.trackingId}`)} className="font-brand font-bold text-slate-900 hover:text-[#F97316] transition-colors cursor-pointer flex items-center gap-2">
-                                 {parcel.trackingId} <span className="text-[10px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded border border-slate-200">VIEW</span>
+                  <tbody className="divide-y divide-slate-50">
+                     {myParcels.map((parcel, idx) => (
+                        <tr 
+                           key={parcel.slug} 
+                           className="hover:bg-slate-50/50 transition-all group animate-in fade-in"
+                           style={{ animationDelay: `${idx * 40}ms` }}
+                        >
+                           <td className="px-10 py-8 align-top">
+                              <div 
+                                 onClick={() => navigate(`/shipments/${parcel.trackingId}`)} 
+                                 className="flex items-center gap-4 cursor-pointer group/id"
+                              >
+                                 <div className="w-12 h-12 rounded-[1.25rem] bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#F97316] group-hover:bg-[#F97316] group-hover:text-white transition-all duration-300">
+                                    <Package className="w-6 h-6" />
+                                 </div>
+                                 <div>
+                                    <div className="font-brand font-bold text-slate-900 text-lg group-hover/id:text-[#F97316] transition-colors flex items-center gap-2">
+                                       {parcel.trackingId}
+                                       <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover/id:opacity-100 group-hover/id:translate-x-0 transition-all" />
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Packet Verified</div>
+                                 </div>
                               </div>
-                              <div className="font-brand font-medium text-slate-600 text-sm max-w-xs truncate mt-1">{parcel.description}</div>
-                              <div className="text-[10px] text-emerald-600 font-brand font-bold mt-2 bg-emerald-500/10 w-fit px-2 py-0.5 rounded-lg border border-emerald-500/20">VALUE: ${parcel.price}</div>
+                              <div className="font-brand font-medium text-slate-500 text-sm max-w-[200px] truncate mt-4 pl-1">{parcel.description}</div>
                            </td>
-                           <td className="px-8 py-6 align-top">
-                              <div className="flex items-center text-xs font-brand text-slate-500">
-                                 <span className="text-slate-600 font-bold">{getOfficeName(parcel.sourceOfficeId)}</span>
-                                 <ArrowRight className="w-3 h-3 mx-2 text-[#F97316]" />
-                                 <span className="text-slate-600 font-bold">{getOfficeName(parcel.destinationOfficeId)}</span>
+                           <td className="px-10 py-8 align-top">
+                              <div className="space-y-4 pt-2">
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">{getOfficeName(parcel.sourceOfficeId)}</span>
+                                 </div>
+                                 <div className="h-6 w-px bg-slate-100 ml-1"></div>
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-[#F97316]"></div>
+                                    <span className="text-xs font-bold text-slate-900 uppercase tracking-tight bg-orange-50 px-3 py-1 rounded-lg border border-orange-100">{getOfficeName(parcel.destinationOfficeId)}</span>
+                                 </div>
                               </div>
                            </td>
-                           <td className="px-8 py-6 align-top">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tighter
-                            ${parcel.currentStatus === ParcelStatus.DELIVERED ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                    parcel.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' :
-                                       parcel.currentStatus === ParcelStatus.ARRIVED ? 'bg-[#F97316]/10 text-[#F97316] border border-[#F97316]/20' :
-                                          'bg-slate-100 text-slate-500 border border-slate-200'}
-                          `}>
-                                 {parcel.currentStatus.replace('_', ' ')}
-                              </span>
+                           <td className="px-10 py-8 align-top">
+                              <div className="pt-2">
+                                 <span className={`inline-flex items-center px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest
+                                    ${parcel.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-500/10 text-sky-600 border border-sky-500/20 shadow-sm shadow-sky-500/5' :
+                                              parcel.currentStatus === ParcelStatus.ARRIVED ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-sm shadow-emerald-500/5' :
+                                                    'bg-slate-100 text-slate-500 border border-slate-200'}
+                                  `}>
+                                    {parcel.currentStatus.replace('_', ' ')}
+                                 </span>
+                                 <div className="text-[10px] text-emerald-600 font-brand font-bold mt-4 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    VALUE: <span className="text-slate-900">${parcel.price}</span>
+                                 </div>
+                              </div>
                            </td>
-                           <td className="px-8 py-6 align-top text-right">
-                              {renderAction(parcel)}
+                           <td className="px-10 py-8 align-top text-right">
+                              <div className="flex flex-col items-end gap-3 pt-2">
+                                 {renderAction(parcel)}
+                              </div>
                            </td>
                         </tr>
                      ))}
                   </tbody>
                </table>
+               </div>
             )}
          </div>
 

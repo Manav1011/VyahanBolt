@@ -10,16 +10,15 @@ export const generateLogisticsInsight = async (parcels: Parcel[], offices: Offic
   const client = getClient();
   if (!client) throw new Error("API Key not found");
 
-  const dataSummary = {
-    totalParcels: parcels.length,
-    offices: offices.map(o => o.name),
-    parcels: parcels.map(p => ({
-      status: p.currentStatus,
-      route: `${p.sourceOfficeId} -> ${p.destinationOfficeId}`,
-      weight: p.weightKg,
-      price: p.price
-    }))
-  };
+    const dataSummary = {
+      totalParcels: parcels.length,
+      offices: offices.map(o => o.name),
+      parcels: parcels.map(p => ({
+        status: p.currentStatus,
+        route: `${p.sourceOfficeId} -> ${p.destinationOfficeId}`,
+        price: p.price
+      }))
+    };
 
   const prompt = `
     You are a helpful logistics assistant. Analyze this data:

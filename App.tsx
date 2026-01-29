@@ -4,6 +4,7 @@ import { Login } from './views/Login';
 import { Layout } from './components/Layout';
 import { Dashboard } from './views/Dashboard';
 import { Offices } from './views/Offices';
+import { Buses } from './views/Buses';
 import { BookParcel } from './views/BookParcel';
 import { ParcelList } from './views/ParcelList';
 import { ShipmentDetails } from './views/ShipmentDetails';
@@ -83,6 +84,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/offices" element={currentUser.role === UserRole.SUPER_ADMIN ? <Offices /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/buses" element={currentUser.role === UserRole.SUPER_ADMIN ? <Buses /> : <Navigate to="/dashboard" replace />} />
         <Route path="/book" element={currentUser.role === UserRole.OFFICE_ADMIN ? <BookParcel /> : <Navigate to="/dashboard" replace />} />
         <Route path="/shipments" element={<ParcelList />} />
         <Route path="/shipments/:trackingId" element={<ShipmentDetails />} />

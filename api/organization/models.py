@@ -35,3 +35,17 @@ class Branch(BaseModel):
         
     def __str__(self):
         return f"{self.title} - {self.organization.title}"
+
+class Bus(BaseModel):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='buses')
+    bus_number = models.CharField(max_length=50)
+    preferred_days = models.JSONField(default=list, help_text="List of preferred days (1=Monday, 7=Sunday)")
+    description = models.TextField(null=True, blank=True)
+    metadata = models.JSONField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name_plural = "Buses"
+        unique_together = [['organization', 'bus_number']]
+        
+    def __str__(self):
+        return f"Bus {self.bus_number} - {self.organization.title}"

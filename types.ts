@@ -20,9 +20,7 @@ export interface User {
 export enum ParcelStatus {
   BOOKED = 'BOOKED',
   IN_TRANSIT = 'IN_TRANSIT',
-  ARRIVED = 'ARRIVED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED'
+  ARRIVED = 'ARRIVED'
 }
 
 export enum PaymentMode {
@@ -52,6 +50,7 @@ export interface Parcel {
   paymentMode: PaymentMode;
   price: number;
   currentStatus: ParcelStatus;
+  bus?: Bus; // Associated bus
   history: TrackingEvent[];
   createdAt: string; // ISO string from backend
 }
@@ -62,4 +61,11 @@ export interface NotificationLog {
   recipient: string; // "Sender" or "Receiver"
   phone: string;
   message: string;
+}
+
+export interface Bus {
+  slug: string;
+  busNumber: string;
+  preferredDays: number[]; // 1=Monday, 7=Sunday
+  description?: string;
 }
