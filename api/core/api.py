@@ -1,7 +1,7 @@
 from django_bolt import BoltAPI
 from core.utils import response
 
-api = BoltAPI(django_middleware=False)
+api = BoltAPI(django_middleware=False, prefix="/api")
 
 @api.get("/health")
 async def health_check():

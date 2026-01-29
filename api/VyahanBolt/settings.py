@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django_bolt',
     'core',
     'Auth',
-    'organization'
+    'organization',
+    'shipment'
 ]
 
 MIDDLEWARE = [

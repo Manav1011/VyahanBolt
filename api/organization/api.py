@@ -12,7 +12,7 @@ from core.utils import jwt_auth, store
 from asgiref.sync import sync_to_async
 
 
-open_api = BoltAPI(django_middleware=False)
+open_api = BoltAPI(django_middleware=False, prefix="/api")
 
 @open_api.post(
     "/organization/create/",
@@ -53,7 +53,7 @@ async def create_organization(request, credentials: OrganizationCreateSerializer
     )
     
 # Protected Routes 
-api = BoltAPI(django_middleware=False, middleware=[OrganizationMiddleware])
+api = BoltAPI(django_middleware=False, middleware=[OrganizationMiddleware], prefix="/api")
 api.mount("/open", open_api)
 
 @api.get("/organization/info/")

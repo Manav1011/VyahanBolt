@@ -11,7 +11,7 @@ import jwt
 from django.contrib.auth import get_user_model
 import uuid
 
-api = BoltAPI(django_middleware=False)
+api = BoltAPI(django_middleware=False, prefix="/api")
 
 @api.post("/auth/token")
 async def login(credentials: LoginRequest):
