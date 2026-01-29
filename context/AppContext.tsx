@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, Office, Parcel, ParcelStatus, TrackingEvent, UserRole, NotificationLog, PaymentMode } from '../types';
-import { fetchHealth, fetchBranches, loginOrganization, loginBranch, logoutUser, createApiClient, fetchShipments, createShipment, updateShipmentStatus as apiUpdateStatus } from '../services/apiService';
+import { fetchHealth, fetchBranches, loginOrganization, loginBranch, logoutUser, createApiClient } from '../services/apiService';
 import { jwtDecode } from 'jwt-decode';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -57,18 +57,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const initApi = createApiClient();
 
       try {
-        const healthData = await initApi.get('/organization/health/');
-        if (healthData.status_code === 200) {
+        const healthData = await initApi.get('/organization/info/');
+        // Backend returns: { message, data, error } with HTTP status code
+        if (healthData.status === 200 && healthData.data) {
           setOrganization(healthData.data);
 
           let mappedOffices: Office[] = [];
           // Use bundled branches from health check
-          if (healthData.data.branches) {
+          if (healthData.data.branches && Array.isArray(healthData.data.branches) && healthData.data.branches.length > 0) {
             mappedOffices = healthData.data.branches.map((b: any) => ({
               id: b.slug,
-              name: b.title
+              name: b.title,
+              username: b.owner?.username || '' // Store owner username for login
             }));
             setOffices(mappedOffices);
+          } else {
+            // If no branches in response, set empty array explicitly
+            setOffices([]);
           }
 
           // Check if we have a saved token and restore session
@@ -78,24 +83,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               const decoded: any = jwtDecode(access);
               const currentTime = Date.now() / 1000;
               if (decoded.exp > currentTime) {
+                // JWT uses 'sub' for user ID and 'login_type' in extra_claims
+                const loginType = decoded.login_type || (decoded.sub_type); // fallback for compatibility
+                const userId = decoded.sub || decoded.sub_id; // fallback for compatibility
+                
                 const user: User = {
-                  id: decoded.sub_id,
-                  name: decoded.sub_type === 'org'
+                  id: userId,
+                  name: loginType === 'organization'
                     ? healthData.data.title
-                    : mappedOffices.find((o: any) => o.id === decoded.sub_id)?.name || 'Branch Manager',
-                  role: decoded.sub_type === 'org' ? UserRole.SUPER_ADMIN : UserRole.OFFICE_ADMIN,
-                  officeId: decoded.sub_type === 'branch' ? decoded.sub_id : undefined
+                    : mappedOffices.find((o: any) => o.id === userId)?.name || 'Branch Manager',
+                  role: loginType === 'organization' ? UserRole.SUPER_ADMIN : UserRole.OFFICE_ADMIN,
+                  officeId: loginType === 'branch' ? userId : undefined
                 };
                 setCurrentUser(user);
 
                 // If admin, also fetch the full branch details
                 if (user.role === UserRole.SUPER_ADMIN) {
                   const adminApi = createApiClient(); // Use local since api useMemo might not be ready in exact same tick
-                  const adminBranches = await adminApi.get('/organization/branches/admin/');
-                  if (adminBranches.status_code === 200) {
-                    const mapped = adminBranches.data.branches.map((b: any) => ({
+                  const adminBranches = await adminApi.get('/branch/list/');
+                  if (adminBranches.status === 200 && adminBranches.data) {
+                    const mapped = adminBranches.data.map((b: any) => ({
                       id: b.slug,
-                      name: b.title
+                      name: b.title,
+                      username: b.owner?.username || '' // Store owner username for login
                     }));
                     setOffices(mapped);
                   }
@@ -117,11 +127,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     };
 
-    initializeApp().then(() => {
-      if (localStorage.getItem('access_token')) {
-        fetchParcels();
-      }
-    });
+    initializeApp();
+    // Note: fetchParcels will be called after login or when components mount
   }, []);
 
   // Helper to log "SMS"
@@ -140,31 +147,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       let data;
       if (role === UserRole.SUPER_ADMIN) {
-        data = await loginOrganization(organization?.slug, credentials.password || '');
+        // For organization login, username is the organization owner's username
+        const orgUsername = organization?.owner?.username || '';
+        if (!orgUsername) {
+          return { success: false, message: 'Organization owner username not found' };
+        }
+        data = await loginOrganization(orgUsername, credentials.password || '');
       } else if (role === UserRole.OFFICE_ADMIN) {
-        data = await loginBranch(credentials.id || '', credentials.password || '');
+        // For branch login, username is the branch owner's username
+        const selectedBranch = offices.find((o: any) => o.id === credentials.id);
+        const branchUsername = selectedBranch?.username || '';
+        if (!branchUsername) {
+          return { success: false, message: 'Branch owner username not found' };
+        }
+        data = await loginBranch(branchUsername, credentials.password || '');
       } else {
         // Public/Tracking - stays mock/session-less for now
         setCurrentUser({ id: 'public', name: 'Guest', role: UserRole.PUBLIC });
         return { success: true, message: 'Logged in as guest' };
       }
 
-      if (data.status_code === 200) {
+      // Backend returns: { message, data: { access, refresh }, error } with HTTP status code
+      if (data.status === 200 && data.data) {
         const { access, refresh } = data.data;
         localStorage.setItem('access_token', access);
         localStorage.setItem('refresh_token', refresh);
 
         const decoded: any = jwtDecode(access);
+        // JWT uses 'sub' for user ID and 'login_type' in extra_claims
+        const userId = decoded.sub || decoded.sub_id; // fallback for compatibility
+        const loginType = decoded.login_type || decoded.sub_type; // fallback for compatibility
+        
+        // Get name from organization context or branch lookup
         const name = role === UserRole.SUPER_ADMIN
-          ? data.data.organization.title
-          : data.data.branch.title;
+          ? organization?.title || 'Organization Admin'
+          : offices.find((o: any) => o.id === credentials.id)?.name || 'Branch Manager';
 
         const user: User = {
-          id: decoded.sub_id,
+          id: userId,
           name: name,
           role: role,
-          officeId: role === UserRole.OFFICE_ADMIN ? decoded.sub_id : undefined
+          // For branch admin, officeId should be the branch slug (credentials.id), not userId
+          // userId is the branch owner's username which equals branch.slug, so they should match
+          // But to be safe, use credentials.id if available (the branch slug selected during login)
+          officeId: role === UserRole.OFFICE_ADMIN ? (credentials.id || userId) : undefined
         };
+        
+        console.log("Login - Setting user:", user, "credentials.id:", credentials.id, "userId:", userId);
 
         setCurrentUser(user);
 
@@ -178,7 +207,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return { success: true, message: data.message };
       }
       else {
-        return { success: false, message: data.message || 'Login failed' };
+        return { success: false, message: data.message || data.error || 'Login failed' };
       }
     } catch (error: any) {
       console.error("Login error:", error);
@@ -187,13 +216,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const logout = useCallback(async () => {
-    const refresh = localStorage.getItem('refresh_token');
-    if (refresh) {
-      try {
-        await logoutUser(refresh);
-      } catch (e) {
-        console.error("Logout error:", e);
-      }
+    // Logout endpoint uses token from Authorization header, no body needed
+    try {
+      await logoutUser();
+    } catch (e) {
+      console.error("Logout error:", e);
     }
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -203,11 +230,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchAdminBranches = useCallback(async () => {
     try {
-      const data = await api.get('/organization/branches/admin/');
-      if (data.status_code === 200) {
-        const mapped = data.data.branches.map((b: any) => ({
+      const data = await api.get('/branch/list/');
+      // Backend returns: { message, data: [...], error } with HTTP status code
+      if (data.status === 200 && data.data) {
+        const mapped = data.data.map((b: any) => ({
           id: b.slug,
-          name: b.title
+          name: b.title,
+          username: b.owner?.username || '' // Store owner username for login
         }));
         setOffices(mapped);
       }
@@ -218,16 +247,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addOffice = async (officeData: { name: string, password?: string }) => {
     try {
-      const data = await api.post('/organization/branches/admin/create/', {
+      const data = await api.post('/branch/add/', {
         title: officeData.name,
         password: officeData.password || 'default_branch_pass'
       });
 
-      if (data.status_code === 201) {
+      // Backend returns status 200 for branch creation
+      if (data.status === 200 && data.data) {
         await fetchAdminBranches(); // Refresh the list
-        return { success: true, message: 'Office created' };
+        return { success: true, message: data.message || 'Office created successfully' };
       }
-      return { success: false, message: data.message || 'Creation failed' };
+      return { success: false, message: data.message || data.error || 'Creation failed' };
     } catch (e: any) {
       return { success: false, message: e.message || 'Error occurred' };
     }
@@ -235,8 +265,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const deleteOffice = async (officeId: string) => {
     try {
-      const data = await api.delete(`/organization/branches/admin/${officeId}/delete/`);
-      if (data.status_code === 200) {
+      const data = await api.delete(`/branch/${officeId}/delete/`);
+      if (data.status === 200 || data.status_code === 200) {
         await fetchAdminBranches();
         return { success: true, message: 'Office deleted' };
       }
@@ -249,9 +279,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const getOfficeName = (id: string) => offices.find(o => o.id === id)?.name || 'Unknown Office';
 
   const fetchParcels = useCallback(async () => {
+    // Don't fetch if user is not logged in
+    if (!currentUser) {
+      console.log("Cannot fetch parcels: user not logged in");
+      return;
+    }
+
     try {
-      const data = await api.get('/shipment/list/');
-      if (data.status_code === 200) {
+      // Use different endpoints based on user role
+      const endpoint = currentUser.role === UserRole.SUPER_ADMIN 
+        ? '/shipment/list/' 
+        : '/shipment/branch/list/';
+      
+      console.log("Fetching parcels from:", endpoint, "for user:", currentUser.role);
+      const data = await api.get(endpoint);
+      console.log("Parcels API response:", data);
+      
+      if (data.status === 200 && data.data) {
+        // Backend now returns full fields in "list" field set
         const mapped: Parcel[] = data.data.map((s: any) => ({
           slug: s.slug,
           trackingId: s.tracking_id,
@@ -259,28 +304,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           senderPhone: s.sender_phone,
           receiverName: s.receiver_name,
           receiverPhone: s.receiver_phone,
-          sourceOfficeId: s.source_branch,
-          destinationOfficeId: s.destination_branch,
-          sourceOfficeTitle: s.source_branch_title,
-          destinationOfficeTitle: s.destination_branch_title,
-          description: s.description,
+          // Backend returns nested branch objects: { slug, title }
+          sourceOfficeId: s.source_branch?.slug || s.source_branch,
+          destinationOfficeId: s.destination_branch?.slug || s.destination_branch,
+          sourceOfficeTitle: s.source_branch?.title || '',
+          destinationOfficeTitle: s.destination_branch?.title || '',
+          description: s.description || '',
           paymentMode: s.payment_mode as PaymentMode,
           price: Number(s.price),
           currentStatus: s.current_status as ParcelStatus,
-          history: s.history.map((h: any) => ({
+          history: (s.history || []).map((h: any) => ({
             status: h.status as ParcelStatus,
             timestamp: new Date(h.created_at).getTime(),
             location: h.location,
-            note: h.remarks
+            note: h.remarks || ''
           })),
           createdAt: s.created_at
         }));
+        console.log("Mapped parcels:", mapped);
         setParcels(mapped);
+      } else {
+        console.warn("Unexpected response status or missing data:", data);
+        setParcels([]);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to fetch shipments:", e);
+      setParcels([]);
     }
-  }, [api]);
+  }, [api, currentUser]);
 
   const createParcel = async (data: any) => {
     try {
@@ -292,41 +343,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         description: data.description,
         price: data.price,
         payment_mode: data.paymentMode,
-        destination_branch: data.destinationOfficeId
+        destination_branch_slug: data.destinationOfficeId // Backend expects destination_branch_slug
       });
 
-      if (resp.status_code === 201) {
+      if (resp.status === 201 && resp.data) {
         await fetchParcels();
+        const s = resp.data;
         const newParcel: Parcel = {
-          slug: resp.data.slug,
-          trackingId: resp.data.tracking_id,
-          senderName: resp.data.sender_name,
-          senderPhone: resp.data.sender_phone,
-          receiverName: resp.data.receiver_name,
-          receiverPhone: resp.data.receiver_phone,
-          sourceOfficeId: resp.data.source_branch,
-          destinationOfficeId: resp.data.destination_branch,
-          sourceOfficeTitle: resp.data.source_branch_title,
-          destinationOfficeTitle: resp.data.destination_branch_title,
-          description: resp.data.description,
-          paymentMode: resp.data.payment_mode as PaymentMode,
-          price: Number(resp.data.price),
-          currentStatus: resp.data.current_status as ParcelStatus,
-          history: resp.data.history.map((h: any) => ({
+          slug: s.slug,
+          trackingId: s.tracking_id,
+          senderName: s.sender_name,
+          senderPhone: s.sender_phone,
+          receiverName: s.receiver_name,
+          receiverPhone: s.receiver_phone,
+          // Backend returns nested branch objects: { slug, title }
+          sourceOfficeId: s.source_branch?.slug || s.source_branch,
+          destinationOfficeId: s.destination_branch?.slug || s.destination_branch,
+          sourceOfficeTitle: s.source_branch?.title || s.source_branch_title || '',
+          destinationOfficeTitle: s.destination_branch?.title || s.destination_branch_title || '',
+          description: s.description,
+          paymentMode: s.payment_mode as PaymentMode,
+          price: Number(s.price),
+          currentStatus: s.current_status as ParcelStatus,
+          history: (s.history || []).map((h: any) => ({
             status: h.status as ParcelStatus,
             timestamp: new Date(h.created_at).getTime(),
             location: h.location,
             note: h.remarks
           })),
-          createdAt: resp.data.created_at
+          createdAt: s.created_at
         };
 
         // Send fake SMS notifications
-        sendFakeSMS('Sender', data.senderPhone, `Your parcel to ${data.receiverName} is booked! Tracking ID: ${resp.data.tracking_id}`);
-        sendFakeSMS('Receiver', data.receiverPhone, `A parcel from ${data.senderName} has been booked. Tracking ID: ${resp.data.tracking_id}`);
+        sendFakeSMS('Sender', data.senderPhone, `Your parcel to ${data.receiverName} is booked! Tracking ID: ${s.tracking_id}`);
+        sendFakeSMS('Receiver', data.receiverPhone, `A parcel from ${data.senderName} has been booked. Tracking ID: ${s.tracking_id}`);
         return { success: true, message: 'Parcel booked successfully', data: newParcel };
       }
-      return { success: false, message: resp.message || 'Booking failed' };
+      return { success: false, message: resp.message || resp.error || 'Booking failed' };
     } catch (e: any) {
       return { success: false, message: e.message || 'Error occurred' };
     }
@@ -334,8 +387,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const updateParcelStatus = async (trackingId: string, newStatus: ParcelStatus, note: string = '') => {
     try {
-      const resp = await apiUpdateStatus(trackingId, newStatus, note);
-      if (resp.status_code === 200) {
+      // Use authenticated API client instead of apiService function
+      const resp = await api.patch(`/shipment/${trackingId}/update-status/`, {
+        status: newStatus,
+        remarks: note
+      });
+      if (resp.status === 200) {
         await fetchParcels();
 
         // SMS notifications (mock)
@@ -376,8 +433,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updateParcelStatus,
       trackShipment: async (id: string) => {
         try {
-          const res = await api.get(`/shipment/track/${id}/`);
-          if (res.status_code === 200) {
+          // Public endpoint - use publicApi for unauthenticated access
+          const publicApi = createApiClient();
+          const res = await publicApi.get(`/shipment/track/${id}/`);
+          if (res.status === 200 && res.data) {
              const s = res.data;
              return {
                 success: true,
@@ -388,15 +447,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   senderPhone: s.sender_phone,
                   receiverName: s.receiver_name,
                   receiverPhone: s.receiver_phone,
-                  sourceOfficeId: s.source_branch,
-                  destinationOfficeId: s.destination_branch,
-                  sourceOfficeTitle: s.source_branch_title,
-                  destinationOfficeTitle: s.destination_branch_title,
+                  // Backend returns nested branch objects: { slug, title }
+                  sourceOfficeId: s.source_branch?.slug || s.source_branch,
+                  destinationOfficeId: s.destination_branch?.slug || s.destination_branch,
+                  sourceOfficeTitle: s.source_branch?.title || s.source_branch_title || '',
+                  destinationOfficeTitle: s.destination_branch?.title || s.destination_branch_title || '',
                   description: s.description,
                   paymentMode: s.payment_mode as PaymentMode,
                   price: Number(s.price),
                   currentStatus: s.current_status as ParcelStatus,
-                  history: s.history.map((h: any) => ({
+                  history: (s.history || []).map((h: any) => ({
                     status: h.status as ParcelStatus,
                     timestamp: new Date(h.created_at).getTime(),
                     location: h.location,
@@ -406,24 +466,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 }
              };
           }
-          return { success: false, message: 'Not found' };
-        } catch (e) {
-          return { success: false, message: 'Error' };
+          return { success: false, message: res.message || 'Not found' };
+        } catch (e: any) {
+          return { success: false, message: e.message || 'Error occurred' };
         }
       },
       getShipmentDetails: async (id: string) => {
         try {
-          // Use the authenticated client 'api' here, not 'publicApi' usage implied by calling service directly? 
-          // Wait, apiService functions use 'publicApi' which is a stateless client.
-          // Yet 'createApiClient' is what AppContext uses for 'api'.
-          // The functions in apiService.ts like 'fetchShipments' use 'publicApi'.
-          // But 'publicApi' in apiService.ts is just a fresh client, it doesn't hold token automatically unless we passed it?
-          // Actually, createApiClient inside apiService.ts pulls from localStorage. So 'publicApi' works if token is in storage.
-          // However, AppContext has its own 'api' instance that handles auto-logout.
-          // We should ideally use 'api.get' here to ensure 401 handling works.
-          
           const res = await api.get(`/shipment/${id}/`);
-          if (res.status_code === 200) {
+          if (res.status === 200 && res.data) {
              const s = res.data;
              return {
                 success: true,
@@ -434,15 +485,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   senderPhone: s.sender_phone,
                   receiverName: s.receiver_name,
                   receiverPhone: s.receiver_phone,
-                  sourceOfficeId: s.source_branch,
-                  destinationOfficeId: s.destination_branch,
-                  sourceOfficeTitle: s.source_branch_title,
-                  destinationOfficeTitle: s.destination_branch_title,
+                  // Backend returns nested branch objects: { slug, title }
+                  sourceOfficeId: s.source_branch?.slug || s.source_branch,
+                  destinationOfficeId: s.destination_branch?.slug || s.destination_branch,
+                  sourceOfficeTitle: s.source_branch?.title || s.source_branch_title || '',
+                  destinationOfficeTitle: s.destination_branch?.title || s.destination_branch_title || '',
                   description: s.description,
                   paymentMode: s.payment_mode as PaymentMode,
                   price: Number(s.price),
                   currentStatus: s.current_status as ParcelStatus,
-                  history: s.history.map((h: any) => ({
+                  history: (s.history || []).map((h: any) => ({
                     status: h.status as ParcelStatus,
                     timestamp: new Date(h.created_at).getTime(),
                     location: h.location,
@@ -452,9 +504,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 }
              };
           }
-          return { success: false, message: 'Not found' };
-        } catch (e) {
-          return { success: false, message: 'Error' };
+          return { success: false, message: res.message || 'Not found' };
+        } catch (e: any) {
+          return { success: false, message: e.message || 'Error occurred' };
         }
       },
       getOfficeName

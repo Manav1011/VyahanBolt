@@ -175,9 +175,9 @@ export const BookParcel: React.FC = () => {
                                     value={form.destinationOfficeId}
                                     onChange={e => setForm({ ...form, destinationOfficeId: e.target.value })}
                                 >
-                                    <option value="" className="bg-white text-slate-900">Select City...</option>
+                                    <option value="" className="bg-white text-slate-900">Select Destination Branch...</option>
                                     {destOffices.map(o => (
-                                        <option key={o.id} value={o.id} className="bg-white text-slate-900">{o.city} — {o.name}</option>
+                                        <option key={o.id} value={o.id} className="bg-white text-slate-900">{o.name}</option>
                                     ))}
                                 </select>
                             </InputGroup>

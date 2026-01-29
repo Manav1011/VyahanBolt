@@ -31,7 +31,12 @@ class ShipmentSerializer(Serializer):
     
     class Config:
         field_sets = {
-            "list": ["slug", "tracking_id", "sender_name", "receiver_name", "current_status", "source_branch", "destination_branch"],
+            "list": [
+                "slug", "tracking_id", "sender_name", "sender_phone",
+                "receiver_name", "receiver_phone", "description",
+                "price", "payment_mode", "current_status",
+                "source_branch", "destination_branch", "history", "created_at"
+            ],
             "detail": [
                 "slug", "tracking_id", "sender_name", "sender_phone", 
                 "receiver_name", "receiver_phone", "description", 

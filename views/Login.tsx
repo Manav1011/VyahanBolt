@@ -1,24 +1,161 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { UserRole } from '../types';
 import { Navigation, Shield, Store, Search, Lock, AlertCircle, ChevronLeft, Check, Loader2 } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const { login, offices } = useApp();
+  const { login, offices, loading: appLoading } = useApp();
   const navigate = useNavigate();
   const [role, setRole] = useState<UserRole | null>(null);
-  const [selectedOffice, setSelectedOffice] = useState<string>(offices[0]?.id || '');
+  // Initialize selectedOffice with first office if available
+  const [selectedOffice, setSelectedOffice] = useState<string>('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const selectRef = useRef<HTMLSelectElement>(null);
+
+  // Update selectedOffice when offices are loaded - always select first branch
+  useEffect(() => {
+    if (offices && offices.length > 0) {
+      // Always ensure first office is selected if none selected or invalid
+      const currentSelected = selectedOffice;
+      const firstId = offices[0]?.id;
+      if (!currentSelected || currentSelected === '' || !offices.find(o => o.id === currentSelected)) {
+        // Force set to first office ID
+        if (firstId) {
+          setSelectedOffice(firstId);
+        }
+      }
+    } else if (selectedOffice && (!offices || offices.length === 0)) {
+      // Clear selection if offices list becomes empty
+      setSelectedOffice('');
+    }
+  }, [offices]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Always select first branch when role changes to OFFICE_ADMIN
+  useEffect(() => {
+    if (role === UserRole.OFFICE_ADMIN) {
+      if (offices && offices.length > 0) {
+        // Force select first office when role changes to branch admin
+        const firstId = offices[0]?.id;
+        if (firstId) {
+          setSelectedOffice(firstId);
+        }
+      } else {
+        // Clear if no offices available
+        setSelectedOffice('');
+      }
+    } else if (role !== UserRole.OFFICE_ADMIN) {
+      // Clear selection when switching away from branch admin
+      setSelectedOffice('');
+    }
+  }, [role, offices]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
+    // Ensure branch is selected for branch admin - use first branch if not selected
+    if (role === UserRole.OFFICE_ADMIN) {
+      // Get fresh offices value - ensure we're not using stale closure
+      const currentOffices = offices || [];
+      
+      // Debug: Log current state
+      console.log('Login attempt - Branch Admin:', { 
+        officesCount: currentOffices.length, 
+        offices: currentOffices, 
+        selectedOffice,
+        selectValue: selectRef.current?.value,
+        appLoading
+      });
+      
+      // Always ensure we have a valid branch ID
+      // If offices are empty but select has a value, try to use that
+      if (!currentOffices || currentOffices.length === 0) {
+        const selectValue = selectRef.current?.value;
+        if (selectValue && selectValue.trim() !== '') {
+          // Select has a value even though offices array is empty - use it
+          console.warn('Offices array is empty but select has value, using select value:', selectValue);
+          try {
+            const result = await login(role as UserRole, {
+              id: selectValue,
+              password: password
+            });
+
+            if (!result.success) {
+              setError(result.message);
+              setLoading(false);
+            } else {
+              navigate('/dashboard');
+            }
+            return;
+          } catch (err: any) {
+            setError("An unexpected error occurred. Please try again.");
+            setLoading(false);
+            return;
+          }
+        }
+        
+        console.error('No offices available at login time', { offices, currentOffices, appLoading, selectValue: selectRef.current?.value });
+        setError('No branches available. Please wait for branches to load or contact administrator.');
+        setLoading(false);
+        return;
+      }
+      
+      // Get the branch ID - always use first office if selectedOffice is invalid/undefined
+      const firstOffice = currentOffices[0];
+      
+      if (!firstOffice || !firstOffice.id) {
+        console.error('First office is invalid:', firstOffice);
+        setError('No branches available. Please contact administrator.');
+        setLoading(false);
+        return;
+      }
+      
+      // Determine branch ID: use selectedOffice if it's a valid string and exists in offices
+      // Otherwise, always use first office ID
+      let branchId: string = firstOffice.id; // Default to first office
+      
+      if (selectedOffice && typeof selectedOffice === 'string' && selectedOffice.trim() !== '') {
+        const foundOffice = currentOffices.find(o => o.id === selectedOffice);
+        if (foundOffice) {
+          branchId = selectedOffice; // Use selected office if valid
+        }
+      }
+      
+      console.log('Using branchId:', branchId, 'from offices:', currentOffices.map(o => ({ id: o.id, name: o.name })));
+      
+      // Always ensure state is synced with the branchId we're using
+      if (selectedOffice !== branchId) {
+        setSelectedOffice(branchId);
+      }
+      
+      // Proceed with login using the determined branchId
+      try {
+        const result = await login(role as UserRole, {
+          id: branchId,
+          password: password
+        });
+
+        if (!result.success) {
+          setError(result.message);
+          setLoading(false);
+        } else {
+          // Explicitly navigate based on role
+          if (role === UserRole.PUBLIC) navigate('/tracking');
+          else navigate('/dashboard');
+        }
+      } catch (err: any) {
+        setError("An unexpected error occurred. Please try again.");
+        setLoading(false);
+      }
+      return; // Early return for branch admin
+    }
+
+    // Handle other roles (SUPER_ADMIN, PUBLIC)
     try {
       const result = await login(role as UserRole, {
         id: selectedOffice,
@@ -44,6 +181,12 @@ export const Login: React.FC = () => {
     setPassword('');
     setError('');
     setLoading(false);
+    // Reset selectedOffice to first branch when going back
+    if (offices.length > 0) {
+      setSelectedOffice(offices[0].id);
+    } else {
+      setSelectedOffice('');
+    }
   };
 
   const RoleButton = ({ title, desc, icon: Icon, targetRole, themeColor, ringColor, bgColor, iconColor = "text-white" }: any) => (
@@ -208,15 +351,34 @@ export const Login: React.FC = () => {
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Terminal ID</label>
                     <div className="relative group">
                       <Store className="absolute left-4 top-4 w-4 h-4 text-slate-500 group-focus-within:text-[#F97316] transition-colors" />
-                      <select
-                        className="w-full pl-10 p-4 bg-white/50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-[#F97316]/50 transition-all text-xs font-bold appearance-none cursor-pointer hover:bg-white"
-                        value={selectedOffice}
-                        onChange={(e) => setSelectedOffice(e.target.value)}
-                      >
-                        {offices.map(office => (
-                          <option key={office.id} value={office.id} className="bg-white text-slate-900">{office.name}</option>
-                        ))}
-                      </select>
+                      {offices.length === 0 ? (
+                        <div className="w-full pl-10 p-4 bg-white/50 border border-slate-200 rounded-xl text-slate-500 text-xs">
+                          Loading branches...
+                        </div>
+                      ) : (
+                        <select
+                          ref={selectRef}
+                          className="w-full pl-10 p-4 bg-white/50 border border-slate-200 rounded-xl text-slate-900 outline-none focus:border-[#F97316]/50 transition-all text-xs font-bold appearance-none cursor-pointer hover:bg-white"
+                          value={selectedOffice || (offices.length > 0 ? offices[0].id : '')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value) {
+                              setSelectedOffice(value);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            // Ensure state is synced when user leaves the field
+                            const value = e.target.value;
+                            if (value && value !== selectedOffice) {
+                              setSelectedOffice(value);
+                            }
+                          }}
+                        >
+                          {offices.map(office => (
+                            <option key={office.id} value={office.id} className="bg-white text-slate-900">{office.name}</option>
+                          ))}
+                        </select>
+                      )}
                       <div className="absolute right-4 top-4 pointer-events-none">
                         <ChevronLeft className="w-4 h-4 text-slate-600 -rotate-90" />
                       </div>

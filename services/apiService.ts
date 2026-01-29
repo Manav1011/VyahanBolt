@@ -19,18 +19,19 @@ export const createApiClient = (onUnauthorized?: () => void) => {
 
             // If token is expired or expires in less than 30 seconds, refresh it
             if (decoded.exp < currentTime + 30) {
-                const response = await fetch(`${API_BASE_URL}/organization/token/refresh/`, {
+                const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ refresh })
+                    body: JSON.stringify({ access: token, refresh })
                 });
 
-                const data = await response.json();
-                if (data.status_code === 200) {
-                    token = data.data.access;
+                const refreshResponse = await response.json();
+                // Backend returns: { message, data: { access, refresh }, error }
+                if (response.status === 200 && refreshResponse.data) {
+                    token = refreshResponse.data.access;
                     localStorage.setItem('access_token', token);
-                    if (data.data.refresh) {
-                        localStorage.setItem('refresh_token', data.data.refresh);
+                    if (refreshResponse.data.refresh) {
+                        localStorage.setItem('refresh_token', refreshResponse.data.refresh);
                     }
                 } else {
                     if (onUnauthorized) onUnauthorized();
@@ -67,7 +68,14 @@ export const createApiClient = (onUnauthorized?: () => void) => {
             throw new Error('Session expired');
         }
 
-        return data;
+        // Return data with HTTP status code for compatibility
+        // Backend returns: { message, data, error }
+        // We add status field for easier checking
+        return {
+            ...data,
+            status: response.status,
+            status_code: response.status // Keep for backward compatibility
+        };
     };
 
     return {
@@ -82,18 +90,28 @@ export const createApiClient = (onUnauthorized?: () => void) => {
 // Stateless client for initial/public calls
 const publicApi = createApiClient();
 
-export const fetchHealth = () => publicApi.get('/organization/health/');
+export const fetchHealth = () => publicApi.get('/organization/info/');
 
-export const loginOrganization = async (org_id: string, password: string) => {
-    return publicApi.post('/organization/login/', { org_id, password });
+export const loginOrganization = async (username: string, password: string) => {
+    return publicApi.post('/auth/token', { 
+        login_type: 'organization',
+        username,
+        password 
+    });
 };
 
-export const loginBranch = async (branch_id: string, password: string) => {
-    return publicApi.post('/organization/branch/login/', { branch_id, password });
+export const loginBranch = async (username: string, password: string) => {
+    return publicApi.post('/auth/token', { 
+        login_type: 'branch',
+        username,
+        password 
+    });
 };
 
-export const logoutUser = async (refresh: string) => {
-    return publicApi.post('/organization/logout/', { refresh });
+export const logoutUser = async () => {
+    // Logout endpoint doesn't need body, uses token from Authorization header
+    const api = createApiClient();
+    return api.post('/auth/logout', {});
 };
 
 export const fetchBranches = () => publicApi.get('/organization/branches/');

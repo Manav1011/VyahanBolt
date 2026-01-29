@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ParcelStatus, UserRole } from '../types';
 import { ArrowRight, Package, Truck, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
-  const { parcels, currentUser, organization } = useApp();
+  const { parcels, currentUser, organization, fetchParcels } = useApp();
   const navigate = useNavigate();
+
+  // Fetch parcels when component mounts
+  useEffect(() => {
+    if (currentUser) {
+      fetchParcels();
+    }
+  }, [currentUser, fetchParcels]);
 
   const relevantParcels = currentUser?.role === UserRole.SUPER_ADMIN
     ? parcels
@@ -108,7 +115,7 @@ export const Dashboard: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {relevantParcels.slice(0, 5).map(parcel => (
-                  <tr key={parcel.id} className="hover:bg-slate-50 transition-all group cursor-pointer">
+                  <tr key={parcel.slug} className="hover:bg-slate-50 transition-all group cursor-pointer">
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
                          <div className="w-8 h-8 rounded-lg bg-[#F97316]/10 border border-[#F97316]/20 flex items-center justify-center text-[#F97316]">
@@ -130,9 +137,9 @@ export const Dashboard: React.FC = () => {
                     </td>
                     <td className="px-8 py-5">
                        <div className="flex items-center text-xs font-brand text-slate-500">
-                          <span className="text-slate-600">{parcel.sourceOfficeId}</span>
+                          <span className="text-slate-600">{parcel.sourceOfficeTitle || parcel.sourceOfficeId}</span>
                           <ArrowRight className="w-3 h-3 mx-2 text-slate-500" />
-                          <span className="text-slate-900 font-bold">{parcel.destinationOfficeId}</span>
+                          <span className="text-slate-900 font-bold">{parcel.destinationOfficeTitle || parcel.destinationOfficeId}</span>
                        </div>
                     </td>
                     <td className="px-8 py-5 font-brand font-bold text-slate-900">${parcel.price}</td>

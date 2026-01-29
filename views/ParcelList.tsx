@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ParcelStatus, UserRole, Parcel } from '../types';
 import { Truck, MapPin, CheckCircle, ArrowRight, Printer } from 'lucide-react';
@@ -7,11 +7,35 @@ import { useNavigate } from 'react-router-dom';
 
 // Component to manage and list parcels with status transition actions
 export const ParcelList: React.FC = () => {
-   const { parcels, currentUser, updateParcelStatus, getOfficeName, offices } = useApp();
+   const { parcels, currentUser, updateParcelStatus, getOfficeName, offices, fetchParcels } = useApp();
+   
+   // Fetch parcels when component mounts
+   useEffect(() => {
+     if (currentUser) {
+       fetchParcels();
+     }
+   }, [currentUser, fetchParcels]);
    const navigate = useNavigate();
    const myOfficeId = currentUser?.officeId;
    const isSuper = currentUser?.role === UserRole.SUPER_ADMIN;
-   const myParcels = parcels.filter(p => isSuper || p.sourceOfficeId === myOfficeId || p.destinationOfficeId === myOfficeId);
+   
+   // Debug logging
+   useEffect(() => {
+     console.log("ParcelList - parcels:", parcels);
+     console.log("ParcelList - currentUser:", currentUser);
+     console.log("ParcelList - myOfficeId:", myOfficeId);
+     console.log("ParcelList - isSuper:", isSuper);
+   }, [parcels, currentUser, myOfficeId, isSuper]);
+   
+   const myParcels = parcels.filter(p => {
+     const matches = isSuper || p.sourceOfficeId === myOfficeId || p.destinationOfficeId === myOfficeId;
+     if (!matches) {
+       console.log("Parcel filtered out:", p.trackingId, "source:", p.sourceOfficeId, "dest:", p.destinationOfficeId, "myOfficeId:", myOfficeId);
+     }
+     return matches;
+   });
+   
+   console.log("ParcelList - myParcels count:", myParcels.length, "total parcels:", parcels.length);
 
    const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null);
 

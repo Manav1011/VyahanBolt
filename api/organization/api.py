@@ -114,7 +114,7 @@ async def list_branches(request):
         data=branches
     )
     
-@api.get("/branch/{branch_slug}/delete/", auth=[jwt_auth], guards=[IsAuthenticated(), HasPermission("organization.is_organization_admin")])
+@api.delete("/branch/{branch_slug}/delete/", auth=[jwt_auth], guards=[IsAuthenticated(), HasPermission("organization.is_organization_admin")])
 async def delete_branch(request, branch_slug: str):
     organization = request.state.get("organization")            
     try:

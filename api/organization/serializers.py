@@ -9,6 +9,7 @@ from core.serializers import UserSerializer
 from msgspec import Meta
 
 class BranchSerializerForOrganization(Serializer):
+    slug: str
     title: str
     description: str = None
     metadata: dict = None    

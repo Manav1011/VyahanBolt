@@ -7,6 +7,7 @@ export enum UserRole {
 export interface Office {
   id: string;
   name: string;
+  username?: string; // Owner username for login
 }
 
 export interface User {
