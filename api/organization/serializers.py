@@ -13,6 +13,8 @@ class BranchSerializerForOrganization(Serializer):
     title: str
     description: str = None
     metadata: dict = None    
+    current_operational_date: str = None
+    last_day_end_at: str = None
     owner: Annotated[UserSerializer, Nested(UserSerializer.fields('public'))]
 
 class OrganizationSerializer(Serializer):
@@ -58,6 +60,8 @@ class BranchSerializer(Serializer):
     title: str
     description: str = None
     metadata: dict = None    
+    current_operational_date: str = None
+    last_day_end_at: str = None
     owner: Annotated[UserSerializer, Nested(UserSerializer.fields('public'))]
     
     class Config:

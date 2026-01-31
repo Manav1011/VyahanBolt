@@ -1,5 +1,6 @@
 from core.models import BaseModel
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import User
 
@@ -27,6 +28,8 @@ class Branch(BaseModel):
     description = models.TextField(null=True, blank=True)
     metadata = models.JSONField(null=True, blank=True)    
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='branch')
+    current_operational_date = models.DateField(default=timezone.now)
+    last_day_end_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         permissions = [

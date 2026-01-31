@@ -49,14 +49,14 @@ export const Offices: React.FC = () => {
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-xl text-slate-800 font-brand">Initialize New Branch</h3>
-                <p className="text-xs text-slate-500">Ensure security protocols are followed during registration.</p>
+                <h3 className="font-bold text-xl text-slate-800 font-brand">Add New Branch</h3>
+                <p className="text-xs text-slate-500">Fill in the details below to add a new branch to your network.</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Hub Name</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Branch Name</label>
                 <div className="relative">
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -67,7 +67,7 @@ export const Offices: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Access Protocol (Password)</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Login Password</label>
                 <div className="relative">
                   <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -86,7 +86,7 @@ export const Offices: React.FC = () => {
                 disabled={loading} 
                 className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
               >
-                {loading ? 'Initializing...' : 'Authorize & Create Hub'}
+                {loading ? 'Adding...' : 'Create Branch'}
                 {!loading && <ArrowRight className="w-4 h-4" />}
               </button>
             </div>
@@ -120,7 +120,7 @@ export const Offices: React.FC = () => {
                   onClick={() => handleDelete(office.id, office.name)}
                   disabled={loading}
                   className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all duration-300 opacity-0 group-hover:opacity-100"
-                  title="Decommission Branch"
+                  title="Delete Branch"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
@@ -129,27 +129,21 @@ export const Offices: React.FC = () => {
               <div className="space-y-2 mb-8">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-3 h-3 text-slate-400" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Primary Hub</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Branch</span>
                 </div>
                 <h3 className="font-bold text-2xl text-slate-900 font-brand group-hover:text-[#F97316] transition-colors">{office.name}</h3>
-                <p className="text-xs text-slate-500 font-medium tracking-tight">Operational node in the Vyahan global network.</p>
+                <p className="text-xs text-slate-500 font-medium tracking-tight">Active branch in your network.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
+              <div className="pt-6 border-t border-slate-100">
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Status</p>
-                  <p className="text-xs font-bold text-emerald-600">Online</p>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Network ID</p>
-                  <p className="text-xs font-mono font-bold text-slate-700">#{office.id.slice(-4).toUpperCase()}</p>
+                  <p className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Online
+                  </p>
                 </div>
               </div>
-
-              <button className="w-full mt-6 py-3.5 bg-slate-50 text-slate-600 rounded-2xl text-xs font-bold group-hover:bg-[#F97316] group-hover:text-white transition-all duration-300 flex items-center justify-center gap-2 border border-slate-100 group-hover:border-transparent">
-                Control Hub Operations
-                <ArrowRight className="w-4 h-4" />
-              </button>
             </div>
 
             {/* Accent Bar */}
@@ -166,8 +160,8 @@ export const Offices: React.FC = () => {
             <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
               <Plus className="w-8 h-8" />
             </div>
-            <p className="font-bold font-brand text-lg group-hover:text-orange-900">Add Global Hub</p>
-            <p className="text-xs mt-1">Initialize another node in the network</p>
+            <p className="font-bold font-brand text-lg group-hover:text-orange-900">Add New Branch</p>
+            <p className="text-xs mt-1">Add another branch to your network</p>
           </button>
         )}
       </div>
@@ -175,13 +169,13 @@ export const Offices: React.FC = () => {
       {offices.length === 0 && !showForm && (
         <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-100 shadow-sm">
           <Globe className="w-20 h-20 text-slate-200 mx-auto mb-6 animate-pulse" />
-          <h3 className="text-2xl font-bold font-brand text-slate-800 mb-2">Network Isolated</h3>
-          <p className="text-slate-500 max-w-sm mx-auto mb-8">No active hubs detected in your network. Register your first branch to begin operations.</p>
+          <h3 className="text-2xl font-bold font-brand text-slate-800 mb-2">No Branches Found</h3>
+          <p className="text-slate-500 max-w-sm mx-auto mb-8">You haven't added any branches yet. Add your first branch to get started.</p>
           <button 
             onClick={() => setShowForm(true)}
             className="px-10 py-4 bg-[#F97316] text-white rounded-[2rem] font-bold text-sm orange-glow hover:scale-105 transition-transform"
           >
-            Initialize First Node
+            Add First Branch
           </button>
         </div>
       )}

@@ -72,15 +72,15 @@ async def create_shipment(request, credentials: ShipmentCreateSerializer, user=D
     prefix = destination_branch.title[0].upper() if destination_branch.title else "X"
     shipment_tracking_id = generate_tracking_id(prefix)
     
-    # Parse day field or default to today
+    # Parse day field or default to branch operational date
     from datetime import datetime
     if credentials.day:
         try:
             shipment_day = datetime.fromisoformat(credentials.day).date()
         except (ValueError, AttributeError):
-            shipment_day = timezone.now().date()
+            shipment_day = source_branch.current_operational_date
     else:
-        shipment_day = timezone.now().date()
+        shipment_day = source_branch.current_operational_date
     
     # Create the shipment
     shipment = await Shipment.objects.acreate(

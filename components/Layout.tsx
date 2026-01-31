@@ -55,7 +55,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex bg-[#F8FAFC] text-slate-900 selection:bg-orange-500/20 selection:text-orange-900">
       {/* Sidebar Desktop - High-Tech Glass */}
-      <aside className="hidden md:flex flex-col w-56 glass-dark fixed h-full z-20 border-r border-slate-200 shadow-2xl shadow-slate-200/50">
+      <aside className="hidden md:flex flex-col w-56 glass-dark fixed h-full z-50 border-r border-slate-200 shadow-2xl shadow-slate-200/50">
         <div className="p-6 flex items-center gap-2">
           <div className="relative group">
             <div className="absolute inset-0 bg-orange-500 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
@@ -65,28 +65,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         <nav className="flex-1 px-4 py-4 space-y-1.5">
-          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 px-2 font-brand">Operational Network</div>
+          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 px-2 font-brand">Main Menu</div>
           {currentUser?.role === UserRole.SUPER_ADMIN && (
             <>
-              <NavItem path="/dashboard" icon={LayoutDashboard} label="Control Terminal" />
-              <NavItem path="/offices" icon={Building2} label="Hub Network" />
-              <NavItem path="/buses" icon={Bus} label="Fleet Management" />
-              <NavItem path="/shipments" icon={ClipboardList} label="Inventory Flow" />
+              <NavItem path="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+              <NavItem path="/offices" icon={Building2} label="Branches" />
+              <NavItem path="/buses" icon={Bus} label="Bus Management" />
               <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
             </>
           )}
 
           {currentUser?.role === UserRole.OFFICE_ADMIN && (
             <>
-              <NavItem path="/dashboard" icon={LayoutDashboard} label="Control Center" />
+              <NavItem path="/dashboard" icon={LayoutDashboard} label="Dashboard" />
               <NavItem path="/book" icon={PackagePlus} label="New Registration" />
-              <NavItem path="/shipments" icon={ClipboardList} label="Active Telemetry" />
               <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
             </>
           )}
 
           {currentUser?.role === UserRole.PUBLIC && (
-            <NavItem path="/tracking" icon={Search} label="Trace Unit" />
+            <NavItem path="/tracking" icon={Search} label="Track Shipment" />
           )}
         </nav>
 
@@ -100,50 +98,60 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
             <div className="overflow-hidden flex-1 min-w-0">
               <p className="text-xs font-bold text-slate-900 truncate font-brand">{currentUser?.name}</p>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.1em] truncate">{currentUser?.role === 'SUPER_ADMIN' ? 'General Overseer' : 'Hub Manager'}</p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.1em] truncate">{currentUser?.role === 'SUPER_ADMIN' ? 'Administrator' : 'Hub Manager'}</p>
             </div>
           </div>
           <button
             onClick={logout}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[9px] font-bold text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 border border-slate-100 hover:border-rose-100 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md uppercase tracking-[0.15em]"
           >
-            <LogOut className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" /> Terminate Session
+            <LogOut className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" /> Logout
           </button>
         </div>
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 w-full glass-dark z-20 px-6 py-4 flex justify-between items-center border-b border-slate-200">
+      <div className="md:hidden fixed top-0 w-full glass-dark z-50 px-6 py-4 flex justify-between items-center border-b border-slate-200">
         <div className="flex items-center space-x-3 text-slate-900">
           <img src="/assets/logo.png" alt="Vyahan Logo" className="w-8 h-8 object-contain" />
           <span className="font-brand font-bold text-xl tracking-tight">{organization?.title || 'Vyhan'}</span>
         </div>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-slate-600">
-          {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="relative p-2 text-slate-500"
+          >
+            <Bell className="w-6 h-6" />
+            {notifications.length > 0 && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#F97316] rounded-full border-2 border-white"></span>
+            )}
+          </button>
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-slate-600">
+            {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-10 glass-dark pt-24 px-6 overflow-y-auto">
+        <div className="md:hidden fixed inset-0 z-40 glass-dark pt-24 px-6 overflow-y-auto">
           <nav className="space-y-3">
              {currentUser?.role === UserRole.SUPER_ADMIN && (
                 <>
-                  <NavItem path="/dashboard" icon={LayoutDashboard} label="Overview" />
-                  <NavItem path="/offices" icon={Building2} label="Branch Network" />
-                  <NavItem path="/buses" icon={Bus} label="Fleet Management" />
+                  <NavItem path="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                  <NavItem path="/offices" icon={Building2} label="Branches" />
+                  <NavItem path="/buses" icon={Bus} label="Bus Management" />
                   <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
                 </>
              )}
              {currentUser?.role === UserRole.OFFICE_ADMIN && (
                 <>
-                  <NavItem path="/dashboard" icon={LayoutDashboard} label="Control Center" />
+                  <NavItem path="/dashboard" icon={LayoutDashboard} label="Dashboard" />
                   <NavItem path="/book" icon={PackagePlus} label="New Registration" />
-                  <NavItem path="/shipments" icon={ClipboardList} label="Active Telemetry" />
                   <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
                 </>
              )}
-            <button onClick={() => logout()} className="block w-full text-center p-4 text-rose-500 font-bold border border-rose-500/20 bg-rose-500/5 rounded-xl">Terminate Session</button>
+            <button onClick={() => logout()} className="block w-full text-center p-4 text-rose-500 font-bold border border-rose-500/20 bg-rose-500/5 rounded-xl">Logout</button>
           </nav>
         </div>
       )}
@@ -151,18 +159,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Main Content Area */}
       <main className="flex-1 md:ml-56 min-h-screen flex flex-col pt-14 md:pt-0">
         {/* Top Header Strip - Minimal Glass */}
-        <header className="h-16 glass sticky top-0 z-10 px-10 flex items-center justify-between border-b border-slate-200/60">
+        <header className="hidden md:flex h-16 glass sticky top-0 z-40 px-10 items-center justify-between border-b border-slate-200/60">
           <div>
             <h2 className="text-xl font-brand font-bold text-slate-900 tracking-tight">
               {activeView === 'book' ? 'Dispatch Control' : 
                activeView === 'analytics' ? 'Analytics Dashboard' :
-               activeView === 'shipments' ? 'Shipment Manifest' :
-               activeView === 'offices' ? 'Hub Network' :
-               activeView === 'buses' ? 'Fleet Management' :
-               activeView === 'dashboard' ? 'Control Terminal' :
+               activeView === 'shipments' ? 'Shipment Details' :
+               activeView === 'offices' ? 'Branches' :
+               activeView === 'buses' ? 'Bus Management' :
+               activeView === 'dashboard' ? 'Dashboard' :
                activeView.charAt(0).toUpperCase() + activeView.slice(1)}
             </h2>
-            <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-brand mt-0.5">Logistics Intelligence System</p>
+            <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-brand mt-0.5">Logistics Management System</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -183,16 +191,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute top-20 right-10 w-96 glass-dark rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-30 animate-in fade-in slide-in-from-top-4">
+              <div className="absolute top-16 md:top-20 right-4 md:right-10 w-[calc(100vw-2rem)] md:w-96 glass-dark rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-4">
                 <div className="p-4 bg-slate-50/50 border-b border-slate-200 flex justify-between items-center">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-brand">Live Feed</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-brand">Notifications</span>
                   <span className="text-[9px] bg-[#F97316]/20 text-[#F97316] px-2 py-0.5 rounded-full font-bold">{notifications.length} Alerts</span>
                 </div>
                 <div className="max-h-[400px] overflow-y-auto">
                   {notifications.length === 0 ? (
                     <div className="p-10 text-center">
                       <Bell className="w-6 h-6 text-slate-600 mx-auto mb-3 opacity-20" />
-                      <p className="text-xs text-slate-500">System baseline nominal</p>
+                      <p className="text-xs text-slate-500">No new notifications</p>
                     </div>
                   ) : (
                     notifications.map(n => (

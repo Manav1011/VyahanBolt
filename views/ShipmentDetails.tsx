@@ -2,15 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Parcel, ParcelStatus } from '../types';
-import { ArrowLeft, MapPin, Truck, Calendar, User, CreditCard, Box, Activity } from 'lucide-react';
+import { ArrowLeft, MapPin, Truck, Calendar, User, CreditCard, Box, Activity, Printer, CheckCircle } from 'lucide-react';
+import ReceiptModal from '../components/ReceiptModal';
+import { UserRole } from '../types';
 
 export const ShipmentDetails: React.FC = () => {
   const { trackingId } = useParams();
   const navigate = useNavigate();
-  const { getShipmentDetails, getOfficeName } = useApp();
+  const { getShipmentDetails, getOfficeName, updateParcelStatus, currentUser, offices } = useApp();
   const [shipment, setShipment] = useState<Parcel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -36,21 +40,28 @@ export const ShipmentDetails: React.FC = () => {
   if (error || !shipment) return (
     <div className="text-center py-20">
       <p className="text-slate-500 font-bold mb-4">{error}</p>
-      <button onClick={() => navigate('/shipments')} className="text-[#F97316] font-bold hover:underline">Back to List</button>
+      <button onClick={() => navigate('/analytics')} className="text-[#F97316] font-bold hover:underline">Back to Shipments</button>
     </div>
   );
 
   return (
+    <>
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/shipments')} className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 transition-colors text-slate-500">
+        <button onClick={() => navigate('/analytics')} className="p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 transition-colors text-slate-500">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
           <h1 className="text-2xl font-brand font-bold text-slate-900">Shipment Details</h1>
           <p className="text-slate-500 text-xs font-brand tracking-widest uppercase">ID: {shipment.trackingId}</p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+            <button
+               onClick={() => setShowReceipt(true)}
+               className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-500 bg-white border border-slate-200 hover:border-slate-300 transition-all uppercase tracking-widest"
+            >
+               <Printer className="w-4 h-4" /> Print Receipt
+            </button>
            <span className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest border 
               ${shipment.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-50 text-sky-600 border-sky-200' : 
                 shipment.currentStatus === ParcelStatus.ARRIVED ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 
@@ -60,6 +71,66 @@ export const ShipmentDetails: React.FC = () => {
         </div>
       </div>
 
+      {/* Action Bar for Branch Admins */}
+      {currentUser?.role === UserRole.OFFICE_ADMIN && (
+        <div className="glass p-6 rounded-[24px] border border-slate-200 bg-white shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600">
+                <Activity className="w-5 h-5" />
+             </div>
+             <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Shipment Actions</p>
+                <p className="text-sm font-bold text-slate-900">Update the status of this shipment</p>
+             </div>
+          </div>
+          
+          <div className="flex gap-3 w-full md:w-auto">
+             {shipment.sourceOfficeId === currentUser.officeId && shipment.currentStatus === ParcelStatus.BOOKED && (
+                <button
+                   onClick={async () => {
+                      setUpdating(true);
+                      const res = await updateParcelStatus(shipment.trackingId, ParcelStatus.IN_TRANSIT, "Dispatched from source hub");
+                      if (res.success) {
+                         const refresh = await getShipmentDetails(shipment.trackingId);
+                         if (refresh.data) setShipment(refresh.data);
+                      }
+                      setUpdating(false);
+                   }}
+                   disabled={updating}
+                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-[#F97316] text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all disabled:opacity-50"
+                >
+                   <Truck className="w-4 h-4" /> Dispatch Shipment
+                </button>
+             )}
+
+             {shipment.destinationOfficeId === currentUser.officeId && shipment.currentStatus === ParcelStatus.IN_TRANSIT && (
+                <button
+                   onClick={async () => {
+                      setUpdating(true);
+                      const res = await updateParcelStatus(shipment.trackingId, ParcelStatus.ARRIVED, "Safely received at destination");
+                      if (res.success) {
+                         const refresh = await getShipmentDetails(shipment.trackingId);
+                         if (refresh.data) setShipment(refresh.data);
+                      }
+                      setUpdating(false);
+                   }}
+                   disabled={updating}
+                   className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all disabled:opacity-50"
+                >
+                   <CheckCircle className="w-4 h-4" /> Mark as Received
+                </button>
+             )}
+             
+             {((shipment.sourceOfficeId === currentUser.officeId && shipment.currentStatus !== ParcelStatus.BOOKED) || 
+               (shipment.destinationOfficeId === currentUser.officeId && shipment.currentStatus === ParcelStatus.ARRIVED)) && (
+                <div className="px-4 py-2 border border-slate-100 bg-slate-50 rounded-lg text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                   This shipment is handled by this branch
+                </div>
+             )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Main Info */}
@@ -67,7 +138,7 @@ export const ShipmentDetails: React.FC = () => {
            {/* Route */}
            <div className="glass p-8 rounded-[32px] border border-slate-200 bg-white shadow-sm">
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                 <MapPin className="w-4 h-4" /> Route Information
+                 <MapPin className="w-4 h-4" /> Shipping Route
               </h3>
               <div className="flex items-center justify-between relative">
                  <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-100 -z-10"></div>
@@ -106,7 +177,7 @@ export const ShipmentDetails: React.FC = () => {
            {/* Cargo */}
            <div className="glass p-8 rounded-[32px] border border-slate-200 bg-white shadow-sm">
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                 <Box className="w-4 h-4" /> Cargo Details
+                 <Box className="w-4 h-4" /> Package Details
               </h3>
               <div className="grid grid-cols-2 gap-8">
                  <div>
@@ -133,7 +204,7 @@ export const ShipmentDetails: React.FC = () => {
         <div className="space-y-8">
            <div className="glass p-8 rounded-[32px] border border-slate-200 bg-slate-50/50 shadow-inner h-full">
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8 flex items-center gap-2">
-                 <Activity className="w-4 h-4" /> Activity Log
+                 <Activity className="w-4 h-4" /> Tracking History
               </h3>
               
               <div className="space-y-8 relative">
@@ -159,5 +230,15 @@ export const ShipmentDetails: React.FC = () => {
 
       </div>
     </div>
+    {showReceipt && (
+      <ReceiptModal
+        parcel={shipment}
+        sourceOffice={offices.find(o => o.id === shipment.sourceOfficeId)}
+        destinationOffice={offices.find(o => o.id === shipment.destinationOfficeId)}
+        user={currentUser}
+        onClose={() => setShowReceipt(false)}
+      />
+    )}
+    </>
   );
 };

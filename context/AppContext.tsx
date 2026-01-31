@@ -11,6 +11,7 @@ interface AppContextType {
   currentUser: User | null;
   organization: any | null;
   offices: Office[];
+  currentBranch: Office | null;
   buses: Bus[];
   parcels: Parcel[];
   notifications: NotificationLog[];
@@ -20,6 +21,8 @@ interface AppContextType {
   addOffice: (officeData: { name: string, password?: string }) => Promise<{ success: boolean, message: string }>;
   deleteOffice: (officeId: string) => Promise<{ success: boolean, message: string }>;
   fetchAdminBranches: () => Promise<void>;
+  fetchMyBranch: () => Promise<void>;
+  processDayEnd: () => Promise<{ success: boolean, message: string }>;
   addBus: (busData: { busNumber: string, preferredDays: number[], description?: string }) => Promise<{ success: boolean, message: string }>;
   deleteBus: (busSlug: string) => Promise<{ success: boolean, message: string }>;
   fetchBuses: () => Promise<void>;
@@ -42,6 +45,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [organization, setOrganization] = useState<any | null>(null);
   const [offices, setOffices] = useState<Office[]>([]);
+  const [currentBranch, setCurrentBranch] = useState<Office | null>(null);
   const [buses, setBuses] = useState<Bus[]>([]);
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [notifications, setNotifications] = useState<NotificationLog[]>([]);
@@ -110,10 +114,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     const mapped = adminBranches.data.map((b: any) => ({
                       id: b.slug,
                       name: b.title,
-                      username: b.owner?.username || '' // Store owner username for login
+                      username: b.owner?.username || '', // Store owner username for login
+                      currentOperationalDate: b.current_operational_date,
+                      lastDayEndAt: b.last_day_end_at
                     }));
                     setOffices(mapped);
                   }
+                } else if (user.role === UserRole.OFFICE_ADMIN) {
+                   const branchApi = createApiClient();
+                   const branchInfo = await branchApi.get('/branch/me/');
+                   if (branchInfo.status === 200 && branchInfo.data) {
+                      const b = branchInfo.data;
+                      setCurrentBranch({
+                         id: b.slug,
+                         name: b.title,
+                         username: b.owner?.username || '',
+                         currentOperationalDate: b.current_operational_date,
+                         lastDayEndAt: b.last_day_end_at
+                      });
+                   }
                 }
               } else {
                 localStorage.removeItem('access_token');
@@ -201,6 +220,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         console.log("Login - Setting user:", user, "credentials.id:", credentials.id, "userId:", userId);
 
         setCurrentUser(user);
+        
+        // Fetch branch info if branch admin
+        if (role === UserRole.OFFICE_ADMIN) {
+           await fetchMyBranch();
+        }
 
         // If admin, refetch branches to get full details
         if (role === UserRole.SUPER_ADMIN) {
@@ -241,7 +265,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const mapped = data.data.map((b: any) => ({
           id: b.slug,
           name: b.title,
-          username: b.owner?.username || '' // Store owner username for login
+          username: b.owner?.username || '', // Store owner username for login
+          currentOperationalDate: b.current_operational_date,
+          lastDayEndAt: b.last_day_end_at
         }));
         setOffices(mapped);
       }
@@ -249,6 +275,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error("Failed to fetch admin branches:", e);
     }
   }, [api]);
+
+  const fetchMyBranch = useCallback(async () => {
+    try {
+      const data = await api.get('/branch/me/');
+      if (data.status === 200 && data.data) {
+        const b = data.data;
+        setCurrentBranch({
+          id: b.slug,
+          name: b.title,
+          username: b.owner?.username || '',
+          currentOperationalDate: b.current_operational_date,
+          lastDayEndAt: b.last_day_end_at
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch my branch:", e);
+    }
+  }, [api]);
+
+  const processDayEnd = async () => {
+    try {
+      const data = await api.post('/branch/day_end/');
+      if (data.status === 200 && data.data) {
+        const b = data.data;
+        setCurrentBranch({
+          id: b.slug,
+          name: b.title,
+          username: b.owner?.username || '',
+          currentOperationalDate: b.current_operational_date,
+          lastDayEndAt: b.last_day_end_at
+        });
+        return { success: true, message: data.message };
+      }
+      return { success: false, message: data.message || data.error || 'Day End failed' };
+    } catch (e: any) {
+      return { success: false, message: e.message || 'Error occurred' };
+    }
+  };
 
   const addOffice = async (officeData: { name: string, password?: string }) => {
     try {
@@ -498,8 +562,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             sendFakeSMS('Receiver', p.receiverPhone, `Parcel ${trackingId} is now in transit.`);
           } else if (newStatus === ParcelStatus.ARRIVED) {
             sendFakeSMS('Receiver', p.receiverPhone, `Parcel ${trackingId} has arrived at destination.`);
-          } else if (newStatus === ParcelStatus.DELIVERED) {
-            sendFakeSMS('Sender', p.senderPhone, `Parcel ${trackingId} was delivered.`);
           }
         }
 
@@ -516,6 +578,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       currentUser,
       organization,
       offices,
+      currentBranch,
       buses,
       parcels,
       notifications,
@@ -525,6 +588,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addOffice,
       deleteOffice,
       fetchAdminBranches,
+      fetchMyBranch,
+      processDayEnd,
       addBus,
       deleteBus,
       fetchBuses,

@@ -87,7 +87,7 @@ const AppContent = () => {
         <Route path="/offices" element={currentUser.role === UserRole.SUPER_ADMIN ? <Offices /> : <Navigate to="/dashboard" replace />} />
         <Route path="/buses" element={currentUser.role === UserRole.SUPER_ADMIN ? <Buses /> : <Navigate to="/dashboard" replace />} />
         <Route path="/book" element={currentUser.role === UserRole.OFFICE_ADMIN ? <BookParcel /> : <Navigate to="/dashboard" replace />} />
-        <Route path="/shipments" element={<ParcelList />} />
+        <Route path="/shipments" element={<Navigate to="/analytics" replace />} />
         <Route path="/shipments/:trackingId" element={<ShipmentDetails />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

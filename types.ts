@@ -8,6 +8,8 @@ export interface Office {
   id: string;
   name: string;
   username?: string; // Owner username for login
+  currentOperationalDate?: string;
+  lastDayEndAt?: string;
 }
 
 export interface User {

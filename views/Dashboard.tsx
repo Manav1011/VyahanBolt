@@ -5,7 +5,7 @@ import { ArrowRight, Package, Truck, CheckCircle, Clock, TrendingUp, Zap, Map, S
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
-  const { parcels, currentUser, organization, fetchParcels, offices } = useApp();
+  const { parcels, currentUser, organization, fetchParcels, offices, currentBranch, processDayEnd } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,17 +14,19 @@ export const Dashboard: React.FC = () => {
     }
   }, [currentUser, fetchParcels]);
 
-  // Filter parcels by role and date (only today's shipments)
-  const getTodayDateString = () => {
+  // Filter parcels by role and date (use operational date for branches)
+  const getWorkingDate = () => {
+    if (currentUser?.role === UserRole.OFFICE_ADMIN && currentBranch?.currentOperationalDate) {
+      return currentBranch.currentOperationalDate;
+    }
     const today = new Date();
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    return today.toISOString().split('T')[0];
   };
 
   const isToday = (dateString: string | undefined) => {
     if (!dateString) return false;
-    // Handle both YYYY-MM-DD format (day field) and ISO datetime format (createdAt fallback)
     const dateOnly = dateString.split('T')[0];
-    return dateOnly === getTodayDateString();
+    return dateOnly === getWorkingDate();
   };
 
   const relevantParcels = (currentUser?.role === UserRole.SUPER_ADMIN
@@ -35,7 +37,7 @@ export const Dashboard: React.FC = () => {
   const stats = {
     total: relevantParcels.length,
     inTransit: relevantParcels.filter(p => p.currentStatus === ParcelStatus.IN_TRANSIT).length,
-    delivered: relevantParcels.filter(p => p.currentStatus === ParcelStatus.DELIVERED).length,
+    arrived: relevantParcels.filter(p => p.currentStatus === ParcelStatus.ARRIVED).length,
     pending: relevantParcels.filter(p => p.currentStatus === ParcelStatus.BOOKED).length,
   };
 
@@ -50,12 +52,6 @@ export const Dashboard: React.FC = () => {
         <div className={`p-3.5 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg shadow-orange-500/20 text-white group-hover:scale-110 transition-transform duration-500`}>
           <Icon className="w-5 h-5" />
         </div>
-        {trend && (
-          <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold ${trend.startsWith('+') ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
-            <TrendingUp className={`w-3 h-3 ${trend.startsWith('-') ? 'rotate-180' : ''}`} />
-            {trend}
-          </div>
-        )}
       </div>
       <div>
         <h3 className="text-3xl font-brand font-bold text-slate-900 mb-0.5 tracking-tight">{value}</h3>
@@ -71,53 +67,57 @@ export const Dashboard: React.FC = () => {
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-orange-500 rounded-full blur-[120px] opacity-20"></div>
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-72 h-72 bg-blue-600 rounded-full blur-[100px] opacity-10"></div>
         
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-          <div className="space-y-5">
+        <div className="relative z-10">
+          <div className="max-w-2xl space-y-5">
             <div className="flex items-center gap-3">
                <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center orange-glow">
                   <Zap className="w-5 h-5 text-white" />
                </div>
-               <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-400">System Command Center</span>
+               <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-orange-400">Dashboard Overview</span>
             </div>
             
             <h1 className="text-3xl md:text-5xl font-bold font-brand tracking-tight leading-tight">
-              {currentUser?.role === UserRole.SUPER_ADMIN ? `${organization?.title}` : `${currentUser?.name}`} Terminal
+              {currentUser?.role === UserRole.SUPER_ADMIN ? `${organization?.title}` : `${currentUser?.name}`}
             </h1>
             
             <p className="text-slate-400 max-w-lg text-base leading-relaxed">
               {currentUser?.role === UserRole.SUPER_ADMIN
-                ? "Overseeing global logistics infrastructure and branch operational integrity."
-                : `Primary management node for ${currentUser?.name} branch operations.`}
+                ? "Manage your branches and view recent shipment activity."
+                : `Managing shipments for the ${currentUser?.name} branch.`}
             </p>
 
-            <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <div className="flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white/80">
-                <Map className="w-3.5 h-3.5 text-orange-400" />
-                Network Live
+                <Clock className="w-3.5 h-3.5 text-orange-400" />
+                Working Date: {new Date(getWorkingDate()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
-              <div className="flex items-center gap-2 bg-white/10 border border-white/20 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white/80">
-                <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                Secured Node
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden lg:grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-right-10 duration-1000">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl space-y-1">
-               <p className="text-2xl font-brand font-bold text-[#F97316]">{stats.inTransit + stats.pending}</p>
-               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Flow</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl space-y-1 translate-y-4">
-               <p className="text-2xl font-brand font-bold text-emerald-400">{stats.delivered}</p>
-               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Completed</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl space-y-1">
-               <p className="text-2xl font-brand font-bold text-slate-400 uppercase">Live</p>
-               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Status</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl space-y-1 translate-y-4">
-               <p className="text-2xl font-brand font-bold text-blue-400">{offices?.length || 0}</p>
-               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Hubs</p>
+              
+              {currentUser?.role === UserRole.OFFICE_ADMIN && (
+                <button
+                  onClick={async () => {
+                    if (window.confirm("Are you sure you want to end the operational day? This will advance the working date to tomorrow and can only be done once per day.")) {
+                      const res = await processDayEnd();
+                      if (res.success) {
+                        alert(res.message);
+                      } else {
+                        alert(res.message);
+                      }
+                    }
+                  }}
+                  disabled={currentBranch?.lastDayEndAt && new Date(currentBranch.lastDayEndAt).toDateString() === new Date().toDateString()}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-[10px] tracking-widest uppercase transition-all shadow-lg ${
+                    (currentBranch?.lastDayEndAt && new Date(currentBranch.lastDayEndAt).toDateString() === new Date().toDateString())
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+                      : 'bg-white text-slate-900 hover:bg-orange-500 hover:text-white border border-white/10'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  { (currentBranch?.lastDayEndAt && new Date(currentBranch.lastDayEndAt).toDateString() === new Date().toDateString()) 
+                    ? 'Day End (Done Today)' 
+                    : 'End Operational Day' 
+                  }
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -125,31 +125,27 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          label="Total Packets"
+          label="Total Packages"
           value={stats.total}
           icon={Package}
-          trend="+12%"
           delay={100}
         />
         <StatCard
           label="In Transit"
           value={stats.inTransit}
           icon={Truck}
-          trend="+5%"
           delay={200}
         />
         <StatCard
-          label="Successfully Delivered"
-          value={stats.delivered}
+          label="Safely Arrived"
+          value={stats.arrived}
           icon={CheckCircle}
-          trend="+8%"
           delay={300}
         />
         <StatCard
-          label="Pending Queue"
+          label="Pending Dispatch"
           value={stats.pending}
           icon={Clock}
-          trend="-2%"
           delay={400}
         />
       </div>
@@ -157,14 +153,14 @@ export const Dashboard: React.FC = () => {
       <div className="bg-white rounded-[2.5rem] overflow-hidden border border-slate-200 shadow-xl">
         <div className="px-10 py-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
           <div>
-            <h3 className="font-brand font-bold text-2xl text-slate-900 tracking-tight">Recent Infrastructure Log</h3>
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mt-1">Real-time Delivery Telemetry</p>
+            <h3 className="font-brand font-bold text-2xl text-slate-900 tracking-tight">Recent Shipments</h3>
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mt-1">Latest shipping activity</p>
           </div>
           <button 
-            onClick={() => navigate('/shipments')} 
+            onClick={() => navigate('/analytics')} 
             className="group flex items-center gap-2 text-xs font-bold text-white bg-slate-900 hover:bg-black px-6 py-4 rounded-2xl transition-all shadow-lg"
           >
-            Access Full Inventory
+            View All Shipments
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
@@ -174,18 +170,18 @@ export const Dashboard: React.FC = () => {
             <div className="bg-slate-50 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-slate-200">
               <Package className="w-10 h-10 text-slate-300" />
             </div>
-            <h3 className="text-xl font-bold font-brand text-slate-800 mb-2">No active data streams</h3>
-            <p className="text-slate-500 max-w-xs mx-auto text-sm leading-relaxed">The logistics network is currently awaiting new dispatch initializations.</p>
+            <h3 className="text-xl font-bold font-brand text-slate-800 mb-2">No shipments today</h3>
+            <p className="text-slate-500 max-w-xs mx-auto text-sm leading-relaxed">There are no shipments logged for today yet.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Shipment Trace</th>
-                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Logistics Status</th>
-                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Vector Path</th>
-                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Timestamp</th>
+                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Shipment ID</th>
+                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Status</th>
+                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Route</th>
+                  <th className="px-10 py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -203,16 +199,15 @@ export const Dashboard: React.FC = () => {
                          </div>
                          <div>
                             <span className="font-brand font-bold text-slate-900 text-lg block">{parcel.trackingId}</span>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID Verified</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Tracking ID</span>
                          </div>
                       </div>
                     </td>
                     <td className="px-10 py-6">
                       <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest
-                          ${parcel.currentStatus === ParcelStatus.DELIVERED ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
+                          ${parcel.currentStatus === ParcelStatus.ARRIVED ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-sm shadow-emerald-500/5' :
                           parcel.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-500/10 text-sky-600 border border-sky-500/20' :
-                          parcel.currentStatus === ParcelStatus.ARRIVED ? 'bg-[#F97316]/10 text-[#F97316] border border-[#F97316]/20' :
-                            'bg-slate-100 text-slate-500 border border-slate-200'}
+                             'bg-slate-100 text-slate-500 border border-slate-200'}
                        `}>
                         {parcel.currentStatus.toLowerCase().replace('_', ' ')}
                       </span>

@@ -49,7 +49,7 @@ const PhoneInput = ({ value, onChange, countryCode, setCountryCode }: any) => {
 };
 
 export const BookParcel: React.FC = () => {
-    const { offices, currentUser, createParcel } = useApp();
+    const { offices, currentUser, createParcel, currentBranch } = useApp();
     const api = createApiClient();
 
     const [form, setForm] = useState({
@@ -77,6 +77,13 @@ export const BookParcel: React.FC = () => {
     const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
     const [showBusModal, setShowBusModal] = useState(false);
     const [loadingBuses, setLoadingBuses] = useState(false);
+
+    // Default to branch's operational date if available
+    useEffect(() => {
+        if (currentBranch?.currentOperationalDate) {
+            setForm(prev => ({ ...prev, day: currentBranch.currentOperationalDate! }));
+        }
+    }, [currentBranch]);
 
     // Fetch all buses in organization on component mount (not dependent on destination)
     useEffect(() => {
@@ -171,7 +178,7 @@ export const BookParcel: React.FC = () => {
                 price: '',
                 paymentMode: PaymentMode.SENDER_PAYS,
                 busSlug: '',
-                day: new Date().toISOString().split('T')[0], // Reset to today
+                day: currentBranch?.currentOperationalDate || new Date().toISOString().split('T')[0],
             });
             setSelectedBus(null);
             setAvailableBuses([]);

@@ -48,28 +48,30 @@ export const Analytics: React.FC = () => {
       fetchAnalytics();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, currentUser]);
+  }, [currentUser]);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (customFilters?: AnalyticsFilter) => {
     if (!currentUser) return;
     
     setLoading(true);
+    const targetFilters = customFilters || filters;
+
     try {
       // Format filters for API - convert dates to ISO strings
       const apiFilters: any = {
-        start_date: filters.startDate ? `${filters.startDate}T00:00:00.000Z` : undefined,
-        end_date: filters.endDate ? `${filters.endDate}T23:59:59.999Z` : undefined,
-        status: filters.status && filters.status.length > 0 ? filters.status : undefined,
-        branch_slug: filters.branchSlug,
-        source_branch_slug: filters.sourceBranchSlug,
-        destination_branch_slug: filters.destinationBranchSlug,
-        bus_slug: filters.busSlug,
-        payment_mode: filters.paymentMode,
-        min_price: filters.minPrice,
-        max_price: filters.maxPrice,
-        search: filters.search,
-        page: filters.page || 1,
-        page_size: filters.pageSize || 50
+        start_date: targetFilters.startDate ? `${targetFilters.startDate}T00:00:00.000Z` : undefined,
+        end_date: targetFilters.endDate ? `${targetFilters.endDate}T23:59:59.999Z` : undefined,
+        status: targetFilters.status && targetFilters.status.length > 0 ? targetFilters.status : undefined,
+        branch_slug: targetFilters.branchSlug,
+        source_branch_slug: targetFilters.sourceBranchSlug,
+        destination_branch_slug: targetFilters.destinationBranchSlug,
+        bus_slug: targetFilters.busSlug,
+        payment_mode: targetFilters.paymentMode,
+        min_price: targetFilters.minPrice,
+        max_price: targetFilters.maxPrice,
+        search: targetFilters.search,
+        page: targetFilters.page || 1,
+        page_size: targetFilters.pageSize || 50
       };
       
       // Remove undefined values
@@ -99,13 +101,16 @@ export const Analytics: React.FC = () => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };
 
-  const handleResetFilters = () => {
-    setFilters({ page: 1, pageSize: 50 });
+  const handleClearAllFilters = () => {
+    const defaultFilters = { page: 1, pageSize: 50 };
+    setFilters(defaultFilters);
+    fetchAnalytics(defaultFilters);
   };
 
   const handleApplyFilters = () => {
-    setFilters(prev => ({ ...prev, page: 1 }));
-    fetchAnalytics();
+    const updatedFilters = { ...filters, page: 1 };
+    setFilters(updatedFilters);
+    fetchAnalytics(updatedFilters);
   };
 
   const formatCurrency = (value: string) => {
@@ -155,14 +160,14 @@ export const Analytics: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-brand">Data Intelligence</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-brand">Shipment Reports</span>
           </div>
-          <h2 className="text-2xl font-brand font-bold text-slate-900 tracking-tight">Analytics Dashboard</h2>
-          <p className="text-slate-500 text-xs font-medium mt-1">Comprehensive insights into shipment operations and performance metrics.</p>
+          <h2 className="text-2xl font-brand font-bold text-slate-900 tracking-tight">Shipment List</h2>
+          <p className="text-slate-500 text-xs font-medium mt-1">View and filter all shipments across your network.</p>
         </div>
         <div className="bg-slate-900 text-white px-4 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-slate-900/20">
           <BarChart3 className="w-5 h-5 text-orange-400" />
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Data</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Records</span>
         </div>
       </div>
 
@@ -173,13 +178,13 @@ export const Analytics: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-600">
               <Filter className="w-4 h-4" />
             </div>
-            <h3 className="text-lg font-brand font-bold text-slate-900">Filter Options</h3>
+            <h3 className="text-lg font-brand font-bold text-slate-900">Filters</h3>
           </div>
           <button
-            onClick={handleResetFilters}
+            onClick={handleClearAllFilters}
             className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg transition-all uppercase tracking-widest"
           >
-            Reset
+            Clear All
           </button>
         </div>
 
@@ -244,7 +249,7 @@ export const Analytics: React.FC = () => {
                 onChange={(e) => handleFilterChange('sourceBranchSlug', e.target.value || undefined)}
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/30"
               >
-                <option value="">All Source Branches</option>
+                <option value="">All Starting Branches</option>
                 {offices.map(office => (
                   <option key={office.id} value={office.id}>{office.name}</option>
                 ))}
@@ -262,7 +267,7 @@ export const Analytics: React.FC = () => {
                 onChange={(e) => handleFilterChange('destinationBranchSlug', e.target.value || undefined)}
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/30"
               >
-                <option value="">All Destination Branches</option>
+                <option value="">All Ending Branches</option>
                 {offices.map(office => (
                   <option key={office.id} value={office.id}>{office.name}</option>
                 ))}
@@ -348,7 +353,7 @@ export const Analytics: React.FC = () => {
           disabled={loading}
           className="w-full md:w-auto px-6 py-2.5 bg-[#F97316] text-white font-bold rounded-lg hover:bg-orange-600 transition-all shadow-md shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-xs"
         >
-          {loading ? 'Loading...' : 'Apply Filters'}
+          {loading ? 'Loading...' : 'Show Results'}
         </button>
       </div>
 
@@ -357,8 +362,8 @@ export const Analytics: React.FC = () => {
       <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xl">
         <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50/50">
           <div>
-            <h3 className="font-brand font-bold text-lg text-slate-900 tracking-tight">Shipment Data</h3>
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mt-0.5">Filtered Results</p>
+            <h3 className="font-brand font-bold text-lg text-slate-900 tracking-tight">Results</h3>
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mt-0.5">Shipments Found</p>
           </div>
           {analyticsData && (
             <div className="text-xs text-slate-600 font-bold">
@@ -370,7 +375,7 @@ export const Analytics: React.FC = () => {
         {loading ? (
           <div className="py-16 text-center">
             <div className="w-10 h-10 border-4 border-orange-200 border-t-[#F97316] rounded-full animate-spin mx-auto mb-3"></div>
-            <p className="text-slate-500 text-sm font-medium">Loading analytics data...</p>
+            <p className="text-slate-500 text-sm font-medium">Loading shipments...</p>
           </div>
         ) : !analyticsData || analyticsData.data.length === 0 ? (
           <div className="py-16 text-center">
@@ -386,7 +391,7 @@ export const Analytics: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Txn ID</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Tracking ID</th>
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Date</th>
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">To Name/Mobile</th>
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">From Name/Mobile</th>
@@ -467,7 +472,12 @@ export const Analytics: React.FC = () => {
             {analyticsData.pagination.total_pages > 1 && (
               <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <button
-                  onClick={() => setFilters(prev => ({ ...prev, page: (prev.page || 1) - 1 }))}
+                  onClick={() => {
+                    const newPage = (analyticsData.pagination.page - 1);
+                    const newFilters = { ...filters, page: newPage };
+                    setFilters(newFilters);
+                    fetchAnalytics(newFilters);
+                  }}
                   disabled={analyticsData.pagination.page === 1}
                   className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
@@ -487,7 +497,11 @@ export const Analytics: React.FC = () => {
                     return (
                       <button
                         key={page}
-                        onClick={() => setFilters(prev => ({ ...prev, page }))}
+                        onClick={() => {
+                          const newFilters = { ...filters, page };
+                          setFilters(newFilters);
+                          fetchAnalytics(newFilters);
+                        }}
                         className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                           page === analyticsData.pagination.page
                             ? 'bg-[#F97316] text-white'
@@ -500,7 +514,12 @@ export const Analytics: React.FC = () => {
                   })}
                 </div>
                 <button
-                  onClick={() => setFilters(prev => ({ ...prev, page: (prev.page || 1) + 1 }))}
+                  onClick={() => {
+                    const newPage = (analyticsData.pagination.page + 1);
+                    const newFilters = { ...filters, page: newPage };
+                    setFilters(newFilters);
+                    fetchAnalytics(newFilters);
+                  }}
                   disabled={analyticsData.pagination.page === analyticsData.pagination.total_pages}
                   className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >

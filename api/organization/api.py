@@ -1,12 +1,12 @@
 from django_bolt import BoltAPI, Depends
 from core.utils import response, get_current_user
-from .middleware import OrganizationMiddleware
-from .serializers import OrganizationSerializer, OrganizationCreateSerializer, BranchSerializer, BranchCreateSerializer, BranchSerializerForOrganization, BusSerializer, BusCreateSerializer
+from organization.middleware import OrganizationMiddleware
+from organization.serializers import OrganizationSerializer, OrganizationCreateSerializer, BranchSerializer, BranchCreateSerializer, BranchSerializerForOrganization, BusSerializer, BusCreateSerializer
 from django.conf import settings
 from django_bolt.auth import APIKeyAuthentication, IsAuthenticated, HasPermission
 from django_bolt.middleware import skip_middleware
 from django.contrib.auth.models import User
-from .models import Organization, Branch, Bus
+from organization.models import Organization, Branch, Bus
 from django.contrib.auth.models import Permission
 from core.utils import jwt_auth, store
 from asgiref.sync import sync_to_async
@@ -146,6 +146,50 @@ async def get_other_branches(request, user=Depends(get_current_user)):
         status=200,
         message="Branches retrieved successfully",
         data=branches
+    )
+
+@api.get("/branch/me/", auth=[jwt_auth], guards=[IsAuthenticated(), HasPermission("organization.is_branch_admin")])
+async def get_my_branch(request, user=Depends(get_current_user)):
+    branch = await Branch.objects.select_related('owner').filter(owner=user).afirst()
+    if not branch:
+        return response(status=404, message="Branch not found")
+    branch_serialized = BranchSerializerForOrganization.from_model(branch)
+    return response(
+        status=200,
+        message="Branch info retrieved",
+        data=branch_serialized
+    )
+
+@api.post("/branch/day_end/", auth=[jwt_auth], guards=[IsAuthenticated(), HasPermission("organization.is_branch_admin")])
+async def branch_day_end(request, user=Depends(get_current_user)):
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Get the branch of the current user
+    branch = await Branch.objects.select_related('owner','organization').filter(owner=user).afirst()
+    if not branch:
+        return response(status=404, message="Branch not found for this user")
+    
+    # Check if day end was already done today (calendar day)
+    now = timezone.now()
+    if branch.last_day_end_at and branch.last_day_end_at.date() == now.date():
+        return response(
+            status=400, 
+            message="Day End already processed for today",
+            error="You can only process Day End once per calendar day."
+        )
+    
+    # Increment operational date
+    branch.current_operational_date += timedelta(days=1)
+    branch.last_day_end_at = now
+    await branch.asave()
+    
+    branch_serialized = BranchSerializerForOrganization.from_model(branch)
+    
+    return response(
+        status=200,
+        message=f"Day End processed. Next operational day is {branch.current_operational_date}",
+        data=branch_serialized
     )
 
 # Bus Management (Organization Admin)
