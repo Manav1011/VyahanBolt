@@ -120,7 +120,10 @@ export interface AnalyticsData {
   slug: string;
   tracking_id: string;
   sender_name: string;
+  sender_phone: string;
   receiver_name: string;
+  receiver_phone: string;
+  description: string;
   source_branch: {
     slug: string;
     title: string;
@@ -138,6 +141,7 @@ export interface AnalyticsData {
   payment_mode: string;
   current_status: string;
   created_at: string;
+  day: string;
 }
 
 export interface AnalyticsResponse {

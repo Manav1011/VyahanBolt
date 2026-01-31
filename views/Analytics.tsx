@@ -125,6 +125,14 @@ export const Analytics: React.FC = () => {
     });
   };
 
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DELIVERED':
@@ -378,52 +386,79 @@ export const Analytics: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Tracking ID</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Sender</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Receiver</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Source</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Destination</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Bus</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Price</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Payment</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Status</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Created</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Txn ID</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Date</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">To Name/Mobile</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">From Name/Mobile</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Bus No</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Time</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Paid Amount</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">To Pay</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {analyticsData.data.map((item, idx) => (
-                    <tr 
-                      key={item.slug} 
-                      className="hover:bg-slate-50 transition-all group cursor-pointer"
-                      onClick={() => navigate(`/shipments/${item.tracking_id}`)}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#F97316] group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
-                            <Package className="w-4 h-4" />
-                          </div>
-                          <span className="font-brand font-bold text-sm text-slate-900">{item.tracking_id}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-slate-900 font-medium">{item.sender_name}</td>
-                      <td className="px-6 py-4 text-xs text-slate-900 font-medium">{item.receiver_name}</td>
-                      <td className="px-6 py-4 text-xs text-slate-600">{item.source_branch.title}</td>
-                      <td className="px-6 py-4 text-xs text-slate-600">{item.destination_branch.title}</td>
-                      <td className="px-6 py-4 text-xs text-slate-600">
-                        {item.bus ? item.bus.bus_number : '-'}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-slate-900">{formatCurrency(item.price)}</td>
-                      <td className="px-6 py-4 text-xs text-slate-600">
-                        {item.payment_mode === PaymentMode.SENDER_PAYS ? 'Sender' : 'Receiver'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest border ${getStatusColor(item.current_status)}`}>
-                          {item.current_status.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-slate-400 font-bold font-brand">{formatDate(item.created_at)}</td>
-                    </tr>
-                  ))}
+                  {analyticsData.data.map((item, idx) => {
+                    const paidAmount = item.payment_mode === PaymentMode.SENDER_PAYS ? parseFloat(item.price) : 0;
+                    const toPay = item.payment_mode === PaymentMode.RECEIVER_PAYS ? parseFloat(item.price) : 0;
+                    
+                    return (
+                      <React.Fragment key={item.slug}>
+                        {/* First Row */}
+                        <tr 
+                          className="hover:bg-slate-50 transition-all group cursor-pointer"
+                          onClick={() => navigate(`/shipments/${item.tracking_id}`)}
+                        >
+                          <td className="px-6 py-4" rowSpan={2}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#F97316] group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                                <Package className="w-4 h-4" />
+                              </div>
+                              <span className="font-brand font-bold text-sm text-slate-900">{item.tracking_id}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-slate-900 font-medium">
+                            {formatDate(item.day || item.created_at)}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-slate-900 font-medium">
+                            <div>
+                              <div className="font-bold">{item.receiver_name}</div>
+                              <div className="text-slate-500 text-[10px]">{item.receiver_phone}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-slate-900 font-medium">
+                            <div>
+                              <div className="font-bold">{item.sender_name}</div>
+                              <div className="text-slate-500 text-[10px]">{item.sender_phone}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-slate-600">
+                            {item.bus ? item.bus.bus_number : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-slate-400 font-bold font-brand">
+                            {formatTime(item.created_at)}
+                          </td>
+                          <td className="px-6 py-4 text-xs font-bold text-slate-900">
+                            {paidAmount > 0 ? formatCurrency(paidAmount.toString()) : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-xs font-bold text-slate-900">
+                            {toPay > 0 ? formatCurrency(toPay.toString()) : '-'}
+                          </td>
+                        </tr>
+                        {/* Second Row - Description */}
+                        <tr 
+                          className="hover:bg-slate-50 transition-all group cursor-pointer border-b-2 border-slate-200"
+                          onClick={() => navigate(`/shipments/${item.tracking_id}`)}
+                        >
+                          <td colSpan={7} className="px-6 py-4 text-xs text-slate-600 bg-slate-50/50 border-t border-slate-200">
+                            <div className="flex items-start gap-2 pt-2">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Description:</span>
+                              <span>{item.description && item.description.trim() !== '' ? item.description : 'No description provided'}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -197,18 +197,27 @@ async def get_organization_analytics(request, filters: AnalyticsFilterSerializer
     offset = (page - 1) * page_size
     shipments = []
     async for shipment in query.order_by('-created_at')[offset:offset + page_size]:
+        # Get description - access the field directly
+        # Handle both None and empty string cases
+        desc = shipment.description
+        description_value = desc if desc and desc.strip() else ''
+        
         shipments.append({
             'slug': shipment.slug,
             'tracking_id': shipment.tracking_id,
             'sender_name': shipment.sender_name,
+            'sender_phone': shipment.sender_phone,
             'receiver_name': shipment.receiver_name,
+            'receiver_phone': shipment.receiver_phone,
+            'description': description_value,
             'source_branch': {'slug': shipment.source_branch.slug, 'title': shipment.source_branch.title},
             'destination_branch': {'slug': shipment.destination_branch.slug, 'title': shipment.destination_branch.title},
             'bus': {'slug': shipment.bus.slug, 'bus_number': shipment.bus.bus_number, 'preferred_days': shipment.bus.preferred_days} if shipment.bus else None,
             'price': str(shipment.price),
             'payment_mode': shipment.payment_mode,
             'current_status': shipment.current_status,
-            'created_at': shipment.created_at.isoformat()
+            'created_at': shipment.created_at.isoformat(),
+            'day': shipment.day.isoformat() if shipment.day else shipment.created_at.date().isoformat()
         })
     
     response_data = {
@@ -273,18 +282,27 @@ async def get_branch_analytics(request, filters: AnalyticsFilterSerializer, user
     offset = (page - 1) * page_size
     shipments = []
     async for shipment in query.order_by('-created_at')[offset:offset + page_size]:
+        # Get description - access the field directly
+        # Handle both None and empty string cases
+        desc = shipment.description
+        description_value = desc if desc and desc.strip() else ''
+        
         shipments.append({
             'slug': shipment.slug,
             'tracking_id': shipment.tracking_id,
             'sender_name': shipment.sender_name,
+            'sender_phone': shipment.sender_phone,
             'receiver_name': shipment.receiver_name,
+            'receiver_phone': shipment.receiver_phone,
+            'description': description_value,
             'source_branch': {'slug': shipment.source_branch.slug, 'title': shipment.source_branch.title},
             'destination_branch': {'slug': shipment.destination_branch.slug, 'title': shipment.destination_branch.title},
             'bus': {'slug': shipment.bus.slug, 'bus_number': shipment.bus.bus_number, 'preferred_days': shipment.bus.preferred_days} if shipment.bus else None,
             'price': str(shipment.price),
             'payment_mode': shipment.payment_mode,
             'current_status': shipment.current_status,
-            'created_at': shipment.created_at.isoformat()
+            'created_at': shipment.created_at.isoformat(),
+            'day': shipment.day.isoformat() if shipment.day else shipment.created_at.date().isoformat()
         })
     
     response_data = {
