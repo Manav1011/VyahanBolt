@@ -151,11 +151,11 @@ export const Offices: React.FC = () => {
           </div>
         ))}
         
-        {/* Placeholder/Empty State Card (Always visible if fewer than 3 offices) */}
-        {offices.length < 3 && !showForm && (
+        {/* Add New Branch Card (Always visible unless form is open) */}
+        {!showForm && (
           <button 
             onClick={() => setShowForm(true)}
-            className="group border-2 border-dashed border-slate-200 rounded-[2rem] p-8 flex flex-col items-center justify-center text-slate-400 hover:border-orange-500/50 hover:bg-orange-50/50 transition-all duration-300"
+            className="group border-2 border-dashed border-slate-200 rounded-[2rem] p-8 flex flex-col items-center justify-center text-slate-400 hover:border-orange-500/50 hover:bg-orange-50/50 transition-all duration-300 active:scale-[0.98]"
           >
             <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
               <Plus className="w-8 h-8" />

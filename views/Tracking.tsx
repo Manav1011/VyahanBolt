@@ -111,7 +111,9 @@ export const Tracking: React.FC = () => {
                    <p className="text-5xl font-brand font-black text-slate-900 tracking-tighter">{result.trackingId}</p>
                 </div>
                 <div className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] border orange-glow
-                    ${result.currentStatus === ParcelStatus.DELIVERED ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-[#F97316]/10 text-[#F97316] border-[#F97316]/30'}`}>
+                    ${result.currentStatus === ParcelStatus.ARRIVED ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
+                      result.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' :
+                      'bg-[#F97316]/10 text-[#F97316] border-[#F97316]/30'}`}>
                     STATUS: {result.currentStatus.replace('_', ' ')}
                 </div>
                 <div className="flex gap-2">
@@ -150,20 +152,14 @@ export const Tracking: React.FC = () => {
                <TimelineItem 
                  label="In Transit" 
                  current={result.currentStatus === ParcelStatus.IN_TRANSIT}
-                 completed={result.currentStatus === ParcelStatus.ARRIVED || result.currentStatus === ParcelStatus.DELIVERED}
+                 completed={result.currentStatus === ParcelStatus.ARRIVED}
                  time={result.history.find((h:any) => h.status === ParcelStatus.IN_TRANSIT)?.timestamp}
                />
                <TimelineItem 
-                 label="Reached Destination" 
+                 label="Arrived at Destination" 
                  current={result.currentStatus === ParcelStatus.ARRIVED}
-                 completed={result.currentStatus === ParcelStatus.DELIVERED}
+                 completed={result.currentStatus === ParcelStatus.ARRIVED}
                  time={result.history.find((h:any) => h.status === ParcelStatus.ARRIVED)?.timestamp}
-               />
-               <TimelineItem 
-                 label="Delivered" 
-                 current={result.currentStatus === ParcelStatus.DELIVERED}
-                 completed={result.currentStatus === ParcelStatus.DELIVERED}
-                 time={result.history.find((h:any) => h.status === ParcelStatus.DELIVERED)?.timestamp}
                />
              </div>
           </div>

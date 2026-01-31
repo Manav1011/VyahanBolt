@@ -16,7 +16,7 @@ const InputGroup: React.FC<{ label: string; children: React.ReactNode }> = ({ la
 const StyledInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
     <input
         {...props}
-        className="w-full p-4 bg-white/50 border border-slate-200 rounded-2xl text-sm font-brand text-slate-900 outline-none focus:border-[#F97316]/50 transition-all hover:bg-white placeholder:text-slate-500"
+        className="w-full p-3 sm:p-4 bg-white/50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm font-brand text-slate-900 outline-none focus:border-[#F97316]/50 transition-all hover:bg-white placeholder:text-slate-500"
     />
 );
 
@@ -28,11 +28,11 @@ const PhoneInput = ({ value, onChange, countryCode, setCountryCode }: any) => {
                 <select 
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
-                    className="h-full px-3 py-4 bg-white/50 border border-slate-200 rounded-2xl text-sm font-brand font-bold text-slate-700 outline-none focus:border-[#F97316]/50 appearance-none cursor-pointer hover:bg-white pr-8"
+                    className="h-full px-2 sm:px-3 py-3 sm:py-4 bg-white/50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm font-brand font-bold text-slate-700 outline-none focus:border-[#F97316]/50 appearance-none cursor-pointer hover:bg-white pr-6 sm:pr-8"
                 >
                     {codes.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+                <div className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">▼</div>
             </div>
             <input 
                 type="tel"
@@ -42,7 +42,7 @@ const PhoneInput = ({ value, onChange, countryCode, setCountryCode }: any) => {
                     if (val.length <= 10) onChange(val);
                 }}
                 placeholder="9876543210"
-                className="flex-1 w-full p-4 bg-white/50 border border-slate-200 rounded-2xl text-sm font-brand text-slate-900 outline-none focus:border-[#F97316]/50 transition-all hover:bg-white placeholder:text-slate-500 font-mono"
+                className="flex-1 w-full p-3 sm:p-4 bg-white/50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm font-brand text-slate-900 outline-none focus:border-[#F97316]/50 transition-all hover:bg-white placeholder:text-slate-500 font-mono"
             />
         </div>
     );
@@ -188,42 +188,43 @@ export const BookParcel: React.FC = () => {
     };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex justify-between items-end">
-                <div>
-                    <h2 className="text-3xl font-brand font-bold text-slate-900 tracking-tight">New Shipment</h2>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-brand mt-1">Creating shipment from {sourceOffice?.name}</p>
+        <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 px-4 sm:px-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 sm:gap-4">
+                <div className="flex-1 min-w-0">
+                    <h2 className="text-2xl sm:text-3xl font-brand font-bold text-slate-900 tracking-tight">New Shipment</h2>
+                    <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-[0.2em] font-brand mt-1 break-words">Creating shipment from {sourceOffice?.name}</p>
                 </div>
-                <div className="text-[10px] font-bold text-slate-500 glass px-4 py-2 rounded-xl uppercase tracking-widest border border-slate-200 font-brand flex items-center gap-2 bg-white/50">
-                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Local Terminal: Primary
+                <div className="text-[9px] sm:text-[10px] font-bold text-slate-500 glass px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl uppercase tracking-widest border border-slate-200 font-brand flex items-center gap-2 bg-white/50 w-full sm:w-auto justify-center sm:justify-start">
+                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></div> 
+                   <span className="whitespace-nowrap">Local Terminal: Primary</span>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-8">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 sm:gap-8">
 
                 {/* Route Card */}
-                <div className="glass p-8 rounded-[32px] border border-slate-200 bg-white/80">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2 rounded-xl bg-[#F97316]/10 border border-[#F97316]/20">
-                            <MapPin className="w-5 h-5 text-[#F97316]" />
+                <div className="glass p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl md:rounded-[32px] border border-slate-200 bg-white/80">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
+                        <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-[#F97316]/10 border border-[#F97316]/20 flex-shrink-0">
+                            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-[#F97316]" />
                         </div>
-                        <h3 className="text-xl font-brand font-bold text-slate-900 tracking-tight">Route Details</h3>
+                        <h3 className="text-lg sm:text-xl font-brand font-bold text-slate-900 tracking-tight">Route Details</h3>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-8 items-center bg-slate-50 p-8 rounded-2xl border border-slate-100">
-                        <div className="flex-1 w-full scale-105">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">From (Origin)</span>
-                            <div className="text-2xl font-brand font-bold text-slate-900">{sourceOffice?.name || sourceOffice?.city}</div>
-                            <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter mt-1 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 w-fit">Status: Online</div>
+                    <div className="flex flex-col md:flex-row gap-4 sm:gap-6 md:gap-8 items-center bg-slate-50 p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border border-slate-100">
+                        <div className="flex-1 w-full text-center md:text-left">
+                            <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">From (Origin)</span>
+                            <div className="text-xl sm:text-2xl font-brand font-bold text-slate-900 break-words">{sourceOffice?.name || sourceOffice?.city}</div>
+                            <div className="text-[9px] sm:text-[10px] text-emerald-600 font-bold uppercase tracking-tighter mt-1 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 w-fit mx-auto md:mx-0">Status: Online</div>
                         </div>
-                        <div className="bg-[#F97316]/20 p-3 rounded-full border border-[#F97316]/30 orange-glow">
-                             <ArrowRight className="text-[#F97316] w-6 h-6 rotate-90 md:rotate-0" />
+                        <div className="bg-[#F97316]/20 p-2 sm:p-3 rounded-full border border-[#F97316]/30 orange-glow flex-shrink-0">
+                             <ArrowRight className="text-[#F97316] w-5 h-5 sm:w-6 sm:h-6 rotate-90 md:rotate-0" />
                         </div>
                         <div className="flex-1 w-full">
                             <InputGroup label="Destination Branch">
                                 <select
                                     required
-                                    className="w-full p-4 bg-white/50 border border-slate-200 rounded-2xl text-sm font-brand font-bold text-slate-900 outline-none focus:border-[#F97316]/50 transition-all cursor-pointer hover:bg-white"
+                                    className="w-full p-3 sm:p-4 bg-white/50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm font-brand font-bold text-slate-900 outline-none focus:border-[#F97316]/50 transition-all cursor-pointer hover:bg-white"
                                     value={form.destinationOfficeId}
                                     onChange={e => setForm({ ...form, destinationOfficeId: e.target.value })}
                                 >
@@ -237,23 +238,23 @@ export const BookParcel: React.FC = () => {
                     </div>
 
                     {/* Shipment Date */}
-                    <div className="mt-6 pt-6 border-t border-slate-200">
+                    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200">
                         <InputGroup label="Shipment Date">
                             <div className="relative">
-                                <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                <Calendar className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
                                 <input
                                     type="date"
                                     required
                                     value={form.day}
                                     onChange={e => setForm({ ...form, day: e.target.value })}
-                                    className="w-full pl-12 pr-4 p-4 bg-white/50 border border-slate-200 rounded-2xl text-sm font-brand text-slate-900 outline-none focus:border-[#F97316]/50 transition-all hover:bg-white"
+                                    className="w-full pl-10 sm:pl-12 pr-4 p-3 sm:p-4 bg-white/50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm font-brand text-slate-900 outline-none focus:border-[#F97316]/50 transition-all hover:bg-white"
                                 />
                             </div>
                         </InputGroup>
                     </div>
 
                     {/* Bus Selection */}
-                    <div className="mt-6 pt-6 border-t border-slate-200">
+                    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-slate-200">
                         <InputGroup label="Select Bus">
                                 {loadingBuses ? (
                                     <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
@@ -261,10 +262,10 @@ export const BookParcel: React.FC = () => {
                                         <span className="text-sm text-slate-600">Loading buses...</span>
                                     </div>
                                 ) : availableBuses.length > 0 ? (
-                                    <div className="space-y-3">
+                                    <div className="space-y-2 sm:space-y-3">
                                         <select
                                             required
-                                            className="w-full p-4 bg-white/50 border border-slate-200 rounded-2xl text-sm font-brand font-bold text-slate-900 outline-none focus:border-[#F97316]/50 transition-all cursor-pointer hover:bg-white"
+                                            className="w-full p-3 sm:p-4 bg-white/50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm font-brand font-bold text-slate-900 outline-none focus:border-[#F97316]/50 transition-all cursor-pointer hover:bg-white"
                                             value={form.busSlug}
                                             onChange={e => {
                                                 const bus = availableBuses.find(b => b.slug === e.target.value);
@@ -285,13 +286,13 @@ export const BookParcel: React.FC = () => {
                                             })}
                                         </select>
                                         {selectedBus && (
-                                            <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-xl border border-orange-200">
-                                                <BusIcon className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                                                <div className="flex-1">
+                                            <div className="flex items-start gap-2 p-3 bg-orange-50 rounded-xl border border-orange-200">
+                                                <BusIcon className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                                                <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-bold text-slate-900">Bus {selectedBus.busNumber}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Calendar className="w-3 h-3 text-slate-500 flex-shrink-0" />
-                                                        <p className="text-[10px] text-slate-600">
+                                                    <div className="flex items-start gap-2 mt-1">
+                                                        <Calendar className="w-3 h-3 text-slate-500 flex-shrink-0 mt-0.5" />
+                                                        <p className="text-[10px] text-slate-600 break-words">
                                                             Operating Days: {selectedBus.preferredDays.map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1]).join(', ')}
                                                         </p>
                                                     </div>
@@ -308,16 +309,16 @@ export const BookParcel: React.FC = () => {
                         </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                     {/* Sender */}
-                    <div className="glass p-8 rounded-[32px] border border-slate-200 bg-white/80">
-                        <div className="flex items-center gap-3 mb-8">
-                             <div className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20">
-                                <User className="w-5 h-5 text-sky-600" />
+                    <div className="glass p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl md:rounded-[32px] border border-slate-200 bg-white/80">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
+                             <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-sky-500/10 border border-sky-500/20 flex-shrink-0">
+                                <User className="w-4 h-4 sm:w-5 sm:h-5 text-sky-600" />
                              </div>
-                            <h3 className="text-xl font-brand font-bold text-slate-900 tracking-tight">Sender</h3>
+                            <h3 className="text-lg sm:text-xl font-brand font-bold text-slate-900 tracking-tight">Sender</h3>
                         </div>
-                        <div className="space-y-6">
+                        <div className="space-y-4 sm:space-y-6">
                             <InputGroup label="Name">
                                 <StyledInput required value={form.senderName} onChange={e => setForm({ ...form, senderName: e.target.value })} placeholder="Enter name" />
                             </InputGroup>
@@ -333,14 +334,14 @@ export const BookParcel: React.FC = () => {
                     </div>
 
                     {/* Receiver */}
-                    <div className="glass p-8 rounded-[32px] border border-slate-200 bg-white/80">
-                         <div className="flex items-center gap-3 mb-8">
-                             <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                                <User className="w-5 h-5 text-purple-600" />
+                    <div className="glass p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl md:rounded-[32px] border border-slate-200 bg-white/80">
+                         <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
+                             <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-purple-500/10 border border-purple-500/20 flex-shrink-0">
+                                <User className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                              </div>
-                            <h3 className="text-xl font-brand font-bold text-slate-900 tracking-tight">Receiver</h3>
+                            <h3 className="text-lg sm:text-xl font-brand font-bold text-slate-900 tracking-tight">Receiver</h3>
                         </div>
-                        <div className="space-y-6">
+                        <div className="space-y-4 sm:space-y-6">
                             <InputGroup label="Name">
                                 <StyledInput required value={form.receiverName} onChange={e => setForm({ ...form, receiverName: e.target.value })} placeholder="Enter name" />
                             </InputGroup>
@@ -357,15 +358,15 @@ export const BookParcel: React.FC = () => {
                 </div>
 
                 {/* Details & Payment */}
-                <div className="glass p-8 rounded-[32px] border border-slate-200 bg-white/80">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                             <Package className="w-5 h-5 text-emerald-600" />
+                <div className="glass p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl md:rounded-[32px] border border-slate-200 bg-white/80">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 md:mb-8">
+                        <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex-shrink-0">
+                             <Package className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
                         </div>
-                        <h3 className="text-xl font-brand font-bold text-slate-900 tracking-tight">Package Details</h3>
+                        <h3 className="text-lg sm:text-xl font-brand font-bold text-slate-900 tracking-tight">Package Details</h3>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-6 sm:mb-8 md:mb-10">
                         <div className="md:col-span-2">
                             <InputGroup label="Package Contents">
                                 <StyledInput required value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="e.g. 5x Electronics, Documents" />
@@ -378,16 +379,16 @@ export const BookParcel: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                        <div className="flex items-center gap-2 mb-6 text-slate-500 font-bold text-[10px] uppercase tracking-widest font-brand">
+                    <div className="bg-slate-50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200">
+                        <div className="flex items-center gap-2 mb-4 sm:mb-6 text-slate-500 font-bold text-[9px] sm:text-[10px] uppercase tracking-widest font-brand">
                              Payment Method
                         </div>
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                             {[
                                 { val: PaymentMode.SENDER_PAYS, label: 'Pre-paid (Sender)' },
                                 { val: PaymentMode.RECEIVER_PAYS, label: 'To Pay (Receiver)' }
                             ].map((opt) => (
-                                <label key={opt.val} className={`flex items-center justify-center p-5 rounded-xl cursor-pointer border text-xs font-bold transition-all font-brand uppercase tracking-widest ${form.paymentMode === opt.val ? 'bg-[#F97316]/10 border-[#F97316]/40 text-[#F97316] orange-glow' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-white'}`}>
+                                <label key={opt.val} className={`flex items-center justify-center p-4 sm:p-5 rounded-lg sm:rounded-xl cursor-pointer border text-[10px] sm:text-xs font-bold transition-all font-brand uppercase tracking-widest active:scale-95 ${form.paymentMode === opt.val ? 'bg-[#F97316]/10 border-[#F97316]/40 text-[#F97316] orange-glow' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-white'}`}>
                                     <input type="radio" name="payment" className="hidden" checked={form.paymentMode === opt.val} onChange={() => setForm({ ...form, paymentMode: opt.val as PaymentMode })} />
                                     {opt.label}
                                 </label>
@@ -398,39 +399,39 @@ export const BookParcel: React.FC = () => {
 
                 <button 
                     disabled={isLoading}
-                    className="w-full bg-[#F97316] text-white py-6 rounded-[24px] font-brand font-bold text-lg hover:bg-[#EA580C] shadow-2xl orange-glow flex items-center justify-center gap-3 transition-all uppercase tracking-[0.2em] transform hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full bg-[#F97316] text-white py-4 sm:py-5 md:py-6 rounded-xl sm:rounded-2xl md:rounded-[24px] font-brand font-bold text-sm sm:text-base md:text-lg hover:bg-[#EA580C] shadow-2xl orange-glow flex items-center justify-center gap-2 sm:gap-3 transition-all uppercase tracking-[0.2em] transform active:scale-95 sm:hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    {isLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Save className="w-6 h-6" />}
-                    {isLoading ? 'Registering...' : 'Confirm & Send Package'}
+                    {isLoading ? <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Save className="w-5 h-5 sm:w-6 sm:h-6" />}
+                    <span className="whitespace-nowrap">{isLoading ? 'Registering...' : 'Confirm & Send Package'}</span>
                 </button>
             </form>
 
             {successData && (
                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[32px] p-10 max-w-md w-full shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-300 relative overflow-hidden">
+                    <div className="bg-white rounded-xl sm:rounded-2xl md:rounded-[32px] p-6 sm:p-8 md:p-10 max-w-md w-full shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-300 relative overflow-hidden">
                         <div className="absolute top-0 left-0 right-0 h-2 bg-[#F97316]"></div>
                         <div className="flex flex-col items-center text-center">
-                            <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 text-emerald-500 border border-emerald-500/20">
-                                <Package className="w-8 h-8" />
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4 sm:mb-6 text-emerald-500 border border-emerald-500/20">
+                                <Package className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8" />
                             </div>
-                            <h3 className="text-2xl font-brand font-bold text-slate-900 mb-2">Shipment Booked!</h3>
-                            <p className="text-slate-500 text-sm mb-6">The parcel has been successfully registered in the system.</p>
+                            <h3 className="text-xl sm:text-2xl font-brand font-bold text-slate-900 mb-2">Shipment Booked!</h3>
+                            <p className="text-slate-500 text-xs sm:text-sm mb-4 sm:mb-6 px-2">The parcel has been successfully registered in the system.</p>
                             
-                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 mb-8 w-full">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Tracking ID</p>
-                                <p className="text-3xl font-brand font-black text-slate-900 tracking-tight">{successData.trackingId}</p>
+                            <div className="bg-slate-50 border border-slate-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 w-full">
+                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Tracking ID</p>
+                                <p className="text-2xl sm:text-3xl font-brand font-black text-slate-900 tracking-tight break-all">{successData.trackingId}</p>
                             </div>
 
-                            <div className="flex flex-col gap-3 w-full">
-                                <button onClick={() => setShowReceipt(true)} className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-200 transition-colors">
+                            <div className="flex flex-col gap-2 sm:gap-3 w-full">
+                                <button onClick={() => setShowReceipt(true)} className="w-full py-3 sm:py-4 bg-slate-100 text-slate-600 rounded-lg sm:rounded-xl font-bold uppercase tracking-widest text-[10px] sm:text-xs hover:bg-slate-200 transition-colors active:scale-95">
                                     Print Receipt
                                 </button>
-                                <button onClick={() => setSuccessData(null)} className="w-full py-4 bg-[#F97316] text-white rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-[#EA580C] orange-glow transition-all">
+                                <button onClick={() => setSuccessData(null)} className="w-full py-3 sm:py-4 bg-[#F97316] text-white rounded-lg sm:rounded-xl font-bold uppercase tracking-widest text-[10px] sm:text-xs hover:bg-[#EA580C] orange-glow transition-all active:scale-95">
                                     New Booking
                                 </button>
                             </div>
-                            <div className="mt-4">
-                                <button onClick={() => setSuccessData(null)} className="text-slate-400 hover:text-slate-600 text-xs font-bold underline uppercase tracking-widest">Close</button>
+                            <div className="mt-3 sm:mt-4">
+                                <button onClick={() => setSuccessData(null)} className="text-slate-400 hover:text-slate-600 text-[10px] sm:text-xs font-bold underline uppercase tracking-widest">Close</button>
                             </div>
                         </div>
                     </div>

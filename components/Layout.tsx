@@ -9,8 +9,6 @@ import {
   Building2,
   Bus,
   LogOut,
-  Search,
-  Bell,
   Menu,
   X,
   User,
@@ -24,10 +22,9 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { currentUser, logout, notifications, organization } = useApp();
+  const { currentUser, logout, organization } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
-  const [showNotifications, setShowNotifications] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const activeView = location.pathname.substring(1) || 'dashboard';
@@ -117,15 +114,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <span className="font-brand font-bold text-xl tracking-tight">{organization?.title || 'Vyhan'}</span>
         </div>
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 text-slate-500"
-          >
-            <Bell className="w-6 h-6" />
-            {notifications.length > 0 && (
-              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#F97316] rounded-full border-2 border-white"></span>
-            )}
-          </button>
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-slate-600">
             {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
           </button>
@@ -157,7 +145,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-56 min-h-screen flex flex-col pt-14 md:pt-0">
+      <main className="flex-1 md:ml-56 min-h-screen flex flex-col pt-20 md:pt-0">
         {/* Top Header Strip - Minimal Glass */}
         <header className="hidden md:flex h-16 glass sticky top-0 z-40 px-10 items-center justify-between border-b border-slate-200/60">
           <div>
@@ -172,55 +160,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </h2>
             <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-brand mt-0.5">Logistics Management System</p>
           </div>
-
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center glass px-3 py-1.5 rounded-xl text-slate-500 focus-within:text-slate-900 focus-within:border-[#F97316]/30 transition-all bg-white/50">
-              <Search className="w-3.5 h-3.5 mr-2" />
-              <input type="text" placeholder="Quick search..." className="bg-transparent border-none text-[11px] focus:ring-0 p-0 w-28 placeholder:text-slate-400" />
-            </div>
-
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 glass rounded-xl text-slate-500 hover:text-slate-900 hover:border-[#F97316]/30 transition-all bg-white/50"
-            >
-              <Bell className="w-4 h-4" />
-              {notifications.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#F97316] rounded-full orange-glow border-2 border-white"></span>
-              )}
-            </button>
-
-            {/* Notification Dropdown */}
-            {showNotifications && (
-              <div className="absolute top-16 md:top-20 right-4 md:right-10 w-[calc(100vw-2rem)] md:w-96 glass-dark rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-4">
-                <div className="p-4 bg-slate-50/50 border-b border-slate-200 flex justify-between items-center">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-brand">Notifications</span>
-                  <span className="text-[9px] bg-[#F97316]/20 text-[#F97316] px-2 py-0.5 rounded-full font-bold">{notifications.length} Alerts</span>
-                </div>
-                <div className="max-h-[400px] overflow-y-auto">
-                  {notifications.length === 0 ? (
-                    <div className="p-10 text-center">
-                      <Bell className="w-6 h-6 text-slate-600 mx-auto mb-3 opacity-20" />
-                      <p className="text-xs text-slate-500">No new notifications</p>
-                    </div>
-                  ) : (
-                    notifications.map(n => (
-                      <div key={n.id} className="p-3 border-b border-slate-100 hover:bg-slate-50 transition-all group">
-                        <div className="flex justify-between items-start mb-1.5">
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${n.recipient === 'Sender' ? 'bg-sky-500/10 text-sky-400 border-sky-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            }`}>{n.recipient} Update</span>
-                          <span className="text-[9px] text-slate-400 group-hover:text-slate-500 transition-colors">{new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium">{n.message}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         </header>
 
-        <div className="p-10 max-w-[1600px] mx-auto w-full flex-1">
+        <div className="p-4 sm:p-6 md:p-8 lg:p-10 max-w-[1600px] mx-auto w-full flex-1">
           {children}
         </div>
       </main>

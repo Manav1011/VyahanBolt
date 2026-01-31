@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { Login } from './views/Login';
 import { Layout } from './components/Layout';
@@ -13,6 +13,32 @@ import { Analytics } from './views/Analytics';
 import { OrganizationNotFound } from './views/OrganizationNotFound';
 import { UserRole } from './types';
 
+
+const TrackingPageWrapper = ({ currentUser }: { currentUser: any }) => {
+  const navigate = useNavigate();
+  
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          <img src="/assets/logo.png" alt="Vyahan Logo" className="w-6 h-6 sm:w-8 sm:h-8 object-contain" />
+          <span className="font-brand font-bold text-lg sm:text-xl text-slate-900 tracking-tight">Vyhan Tracking</span>
+        </div>
+        {!currentUser && (
+          <button
+            onClick={() => navigate('/')}
+            className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F97316] text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold hover:bg-[#EA580C] transition-all uppercase tracking-wider active:scale-95"
+          >
+            Login
+          </button>
+        )}
+      </header>
+      <main className="p-4 sm:p-6">
+        <Tracking />
+      </main>
+    </div>
+  );
+};
 
 const AppContent = () => {
   const { currentUser, organization, loading } = useApp();
@@ -34,29 +60,22 @@ const AppContent = () => {
 
   const location = useLocation();
   const isPublicTracking = location.pathname.startsWith('/track/');
+  const isTrackingPage = location.pathname === '/tracking';
 
-  if (!currentUser && !isPublicTracking) {
-    return <Login />;
-  }
-
-  // Allow direct access to tracking page for everyone (even logged out)
-  if (isPublicTracking) {
+  // Allow direct access to tracking pages for everyone (even logged out) - check this FIRST
+  if (isPublicTracking || isTrackingPage) {
       return (
         <Routes>
-          <Route path="/track/:trackingId" element={
-            <div className="min-h-screen bg-slate-50">
-              <header className="bg-white border-b px-6 py-4 flex justify-between items-center">
-                <div className="flex items-center space-x-2 font-bold text-xl text-indigo-900">
-                  <span className="font-brand text-slate-900">Vyhan Tracking</span>
-                </div>
-              </header>
-              <main className="p-6">
-                <Tracking />
-              </main>
-            </div>
-          } />
+          <Route path="/track/:trackingId" element={<TrackingPageWrapper currentUser={currentUser} />} />
+          <Route path="/tracking" element={<TrackingPageWrapper currentUser={currentUser} />} />
+          <Route path="*" element={<Navigate to="/tracking" replace />} />
         </Routes>
       );
+  }
+
+  // Require login for all other pages
+  if (!currentUser) {
+    return <Login />;
   }
 
   // If public user, show a simplified layout or just the view
