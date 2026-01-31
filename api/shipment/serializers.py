@@ -34,6 +34,7 @@ class ShipmentSerializer(Serializer):
     bus: Annotated[BusMinimalSerializer | None, Nested(BusMinimalSerializer)] = None
     history: Annotated[list[ShipmentHistorySerializer], Nested(ShipmentHistorySerializer, many=True)]
     created_at: str
+    day: str  # DateField serializes as ISO date string (YYYY-MM-DD)
     
     class Config:
         field_sets = {
@@ -41,13 +42,13 @@ class ShipmentSerializer(Serializer):
                 "slug", "tracking_id", "sender_name", "sender_phone",
                 "receiver_name", "receiver_phone", "description",
                 "price", "payment_mode", "current_status",
-                "source_branch", "destination_branch", "bus", "history", "created_at"
+                "source_branch", "destination_branch", "bus", "history", "created_at", "day"
             ],
             "detail": [
                 "slug", "tracking_id", "sender_name", "sender_phone", 
                 "receiver_name", "receiver_phone", "description", 
                 "price", "payment_mode", "current_status", 
-                "source_branch", "destination_branch", "bus", "history", "created_at"
+                "source_branch", "destination_branch", "bus", "history", "created_at", "day"
             ],
         }
 
@@ -61,6 +62,7 @@ class ShipmentCreateSerializer(Serializer):
     payment_mode: str = PaymentMode.SENDER_PAYS
     destination_branch_slug: Annotated[str, Meta(min_length=1)]
     bus_slug: str | None = None
+    day: str | None = None  # ISO date string (YYYY-MM-DD), defaults to today if not provided
     # Note: source_branch is automatically determined from authenticated user's branch
 
 class ShipmentStatusUpdateSerializer(Serializer):

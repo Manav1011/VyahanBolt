@@ -53,6 +53,7 @@ export interface Parcel {
   bus?: Bus; // Associated bus
   history: TrackingEvent[];
   createdAt: string; // ISO string from backend
+  day?: string; // ISO date string (YYYY-MM-DD) from backend
 }
 
 export interface NotificationLog {
@@ -68,4 +69,84 @@ export interface Bus {
   busNumber: string;
   preferredDays: number[]; // 1=Monday, 7=Sunday
   description?: string;
+}
+
+// Analytics Types
+export interface AnalyticsFilter {
+  startDate?: string;
+  endDate?: string;
+  status?: string[];
+  branchSlug?: string;
+  sourceBranchSlug?: string;
+  destinationBranchSlug?: string;
+  busSlug?: string;
+  paymentMode?: PaymentMode;
+  minPrice?: number;
+  maxPrice?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
+export interface PaymentModeCount {
+  payment_mode: string;
+  count: number;
+}
+
+export interface BranchCount {
+  branch: {
+    slug: string;
+    title: string;
+  };
+  count: number;
+  total_revenue: string;
+}
+
+export interface AnalyticsSummary {
+  total_shipments: number;
+  total_revenue: string;
+  average_price: string;
+  by_status: StatusCount[];
+  by_payment_mode: PaymentModeCount[];
+  by_branch?: BranchCount[];
+}
+
+export interface AnalyticsData {
+  slug: string;
+  tracking_id: string;
+  sender_name: string;
+  receiver_name: string;
+  source_branch: {
+    slug: string;
+    title: string;
+  };
+  destination_branch: {
+    slug: string;
+    title: string;
+  };
+  bus: {
+    slug: string;
+    bus_number: string;
+    preferred_days: number[];
+  } | null;
+  price: string;
+  payment_mode: string;
+  current_status: string;
+  created_at: string;
+}
+
+export interface AnalyticsResponse {
+  summary: AnalyticsSummary;
+  data: AnalyticsData[];
+  pagination: {
+    page: number;
+    page_size: number;
+    total: number;
+    total_pages: number;
+  };
 }

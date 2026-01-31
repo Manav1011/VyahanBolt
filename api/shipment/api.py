@@ -7,6 +7,7 @@ from organization.models import Branch, Bus
 from organization.serializers import BusSerializer
 from core.sms_service import async_send_sms
 from django.db.models import Q
+from django.utils import timezone
 from django_bolt.auth import IsAuthenticated, HasPermission
 
 # Protected Routes - uses OrganizationMiddleware to get organization from subdomain
@@ -71,6 +72,16 @@ async def create_shipment(request, credentials: ShipmentCreateSerializer, user=D
     prefix = destination_branch.title[0].upper() if destination_branch.title else "X"
     shipment_tracking_id = generate_tracking_id(prefix)
     
+    # Parse day field or default to today
+    from datetime import datetime
+    if credentials.day:
+        try:
+            shipment_day = datetime.fromisoformat(credentials.day).date()
+        except (ValueError, AttributeError):
+            shipment_day = timezone.now().date()
+    else:
+        shipment_day = timezone.now().date()
+    
     # Create the shipment
     shipment = await Shipment.objects.acreate(
         tracking_id=shipment_tracking_id,
@@ -85,7 +96,8 @@ async def create_shipment(request, credentials: ShipmentCreateSerializer, user=D
         description=credentials.description,
         price=credentials.price,
         payment_mode=credentials.payment_mode,
-        current_status=ShipmentStatus.BOOKED
+        current_status=ShipmentStatus.BOOKED,
+        day=shipment_day
     )
     
     # Create initial history entry

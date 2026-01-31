@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   User,
-  ChevronDown
+  ChevronDown,
+  BarChart3
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -40,12 +41,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           navigate(path);
           setMobileMenuOpen(false);
         }}
-        className={`group flex items-center w-full px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-300 mb-2 hover:scale-[1.02] active:scale-[0.98] ${isActive
+        className={`group flex items-center w-full px-3 py-2.5 text-xs font-medium rounded-lg transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] ${isActive
           ? 'bg-[#F97316] text-white orange-glow'
           : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm border border-transparent hover:border-slate-200'
           }`}
       >
-        <Icon className={`w-5 h-5 mr-3 transition-all duration-300 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#F97316]'}`} />
+        <Icon className={`w-4 h-4 mr-2.5 transition-all duration-300 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#F97316]'}`} />
         <span className="font-brand tracking-tight">{label}</span>
       </button>
     );
@@ -54,23 +55,24 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex bg-[#F8FAFC] text-slate-900 selection:bg-orange-500/20 selection:text-orange-900">
       {/* Sidebar Desktop - High-Tech Glass */}
-      <aside className="hidden md:flex flex-col w-72 glass-dark fixed h-full z-20 border-r border-slate-200 shadow-2xl shadow-slate-200/50">
-        <div className="p-10 flex items-center gap-3">
+      <aside className="hidden md:flex flex-col w-56 glass-dark fixed h-full z-20 border-r border-slate-200 shadow-2xl shadow-slate-200/50">
+        <div className="p-6 flex items-center gap-2">
           <div className="relative group">
             <div className="absolute inset-0 bg-orange-500 blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-            <img src="/assets/logo.png" alt="Vyahan Logo" className="w-12 h-12 object-contain relative z-10 drop-shadow-lg" />
+            <img src="/assets/logo.png" alt="Vyahan Logo" className="w-8 h-8 object-contain relative z-10 drop-shadow-lg" />
           </div>
-          <span className="text-3xl font-brand font-black text-slate-900 tracking-tighter">{organization?.title || 'Vyhan'}</span>
+          <span className="text-lg font-brand font-bold text-slate-900 tracking-tight truncate">{organization?.title || 'Vyhan'}</span>
         </div>
 
-        <nav className="flex-1 px-6 py-6 space-y-2">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-6 px-4 font-brand">Operational Network</div>
+        <nav className="flex-1 px-4 py-4 space-y-1.5">
+          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 px-2 font-brand">Operational Network</div>
           {currentUser?.role === UserRole.SUPER_ADMIN && (
             <>
               <NavItem path="/dashboard" icon={LayoutDashboard} label="Control Terminal" />
               <NavItem path="/offices" icon={Building2} label="Hub Network" />
               <NavItem path="/buses" icon={Bus} label="Fleet Management" />
               <NavItem path="/shipments" icon={ClipboardList} label="Inventory Flow" />
+              <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
             </>
           )}
 
@@ -79,6 +81,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NavItem path="/dashboard" icon={LayoutDashboard} label="Control Center" />
               <NavItem path="/book" icon={PackagePlus} label="New Registration" />
               <NavItem path="/shipments" icon={ClipboardList} label="Active Telemetry" />
+              <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
             </>
           )}
 
@@ -87,24 +90,24 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           )}
         </nav>
 
-        <div className="p-8 border-t border-slate-100 bg-slate-50/30">
-          <div className="flex items-center gap-4 mb-8 px-2 group cursor-default">
+        <div className="p-4 border-t border-slate-100 bg-slate-50/30">
+          <div className="flex items-center gap-2.5 mb-4 px-1 group cursor-default">
             <div className="relative">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg font-brand font-bold shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-sm font-brand font-bold shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform">
                 {currentUser?.name.charAt(0)}
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
             </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-bold text-slate-900 truncate font-brand">{currentUser?.name}</p>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em]">{currentUser?.role === 'SUPER_ADMIN' ? 'General Overseer' : 'Hub Manager'}</p>
+            <div className="overflow-hidden flex-1 min-w-0">
+              <p className="text-xs font-bold text-slate-900 truncate font-brand">{currentUser?.name}</p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.1em] truncate">{currentUser?.role === 'SUPER_ADMIN' ? 'General Overseer' : 'Hub Manager'}</p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 text-[10px] font-bold text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 border border-slate-100 hover:border-rose-100 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-md uppercase tracking-[0.2em]"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[9px] font-bold text-slate-400 bg-white hover:bg-rose-50 hover:text-rose-600 border border-slate-100 hover:border-rose-100 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md uppercase tracking-[0.15em]"
           >
-            <LogOut className="w-4 h-4 transition-transform group-hover:rotate-180" /> Terminate Session
+            <LogOut className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" /> Terminate Session
           </button>
         </div>
       </aside>
@@ -129,6 +132,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <NavItem path="/dashboard" icon={LayoutDashboard} label="Overview" />
                   <NavItem path="/offices" icon={Building2} label="Branch Network" />
                   <NavItem path="/buses" icon={Bus} label="Fleet Management" />
+                  <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
+                </>
+             )}
+             {currentUser?.role === UserRole.OFFICE_ADMIN && (
+                <>
+                  <NavItem path="/dashboard" icon={LayoutDashboard} label="Control Center" />
+                  <NavItem path="/book" icon={PackagePlus} label="New Registration" />
+                  <NavItem path="/shipments" icon={ClipboardList} label="Active Telemetry" />
+                  <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
                 </>
              )}
             <button onClick={() => logout()} className="block w-full text-center p-4 text-rose-500 font-bold border border-rose-500/20 bg-rose-500/5 rounded-xl">Terminate Session</button>
@@ -137,12 +149,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-72 min-h-screen flex flex-col pt-14 md:pt-0">
+      <main className="flex-1 md:ml-56 min-h-screen flex flex-col pt-14 md:pt-0">
         {/* Top Header Strip - Minimal Glass */}
         <header className="h-16 glass sticky top-0 z-10 px-10 flex items-center justify-between border-b border-slate-200/60">
           <div>
             <h2 className="text-xl font-brand font-bold text-slate-900 tracking-tight">
-              {activeView === 'book' ? 'Dispatch Control' : activeView}
+              {activeView === 'book' ? 'Dispatch Control' : 
+               activeView === 'analytics' ? 'Analytics Dashboard' :
+               activeView === 'shipments' ? 'Shipment Manifest' :
+               activeView === 'offices' ? 'Hub Network' :
+               activeView === 'buses' ? 'Fleet Management' :
+               activeView === 'dashboard' ? 'Control Terminal' :
+               activeView.charAt(0).toUpperCase() + activeView.slice(1)}
             </h2>
             <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-brand mt-0.5">Logistics Intelligence System</p>
           </div>

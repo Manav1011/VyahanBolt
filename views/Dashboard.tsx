@@ -14,9 +14,23 @@ export const Dashboard: React.FC = () => {
     }
   }, [currentUser, fetchParcels]);
 
-  const relevantParcels = currentUser?.role === UserRole.SUPER_ADMIN
+  // Filter parcels by role and date (only today's shipments)
+  const getTodayDateString = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  };
+
+  const isToday = (dateString: string | undefined) => {
+    if (!dateString) return false;
+    // Handle both YYYY-MM-DD format (day field) and ISO datetime format (createdAt fallback)
+    const dateOnly = dateString.split('T')[0];
+    return dateOnly === getTodayDateString();
+  };
+
+  const relevantParcels = (currentUser?.role === UserRole.SUPER_ADMIN
     ? parcels
-    : parcels.filter(p => p.sourceOfficeId === currentUser?.officeId || p.destinationOfficeId === currentUser?.officeId);
+    : parcels.filter(p => p.sourceOfficeId === currentUser?.officeId || p.destinationOfficeId === currentUser?.officeId)
+  ).filter(p => isToday(p.day || p.createdAt));
 
   const stats = {
     total: relevantParcels.length,

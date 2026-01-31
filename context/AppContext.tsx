@@ -380,7 +380,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             location: h.location,
             note: h.remarks || ''
           })),
-          createdAt: s.created_at
+          createdAt: s.created_at,
+          day: s.day || s.created_at?.split('T')[0] // Use day field, fallback to created_at date
         }));
         console.log("Mapped parcels:", mapped);
         setParcels(mapped);
@@ -405,7 +406,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         price: data.price,
         payment_mode: data.paymentMode,
         destination_branch_slug: data.destinationOfficeId, // Backend expects destination_branch_slug
-        bus_slug: data.busSlug || null // Include bus slug if provided
+        bus_slug: data.busSlug || null, // Include bus slug if provided
+        day: data.day || null // Include day field if provided
       });
 
       if (resp.status === 201 && resp.data) {
@@ -448,7 +450,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             location: h.location,
             note: h.remarks
           })),
-          createdAt: s.created_at
+          createdAt: s.created_at,
+          day: s.day || s.created_at?.split('T')[0] // Use day field, fallback to created_at date
         };
 
         // Send fake SMS notifications
@@ -565,7 +568,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     location: h.location,
                     note: h.remarks
                   })),
-                  createdAt: s.created_at
+                  createdAt: s.created_at,
+                  day: s.day || s.created_at?.split('T')[0] // Use day field, fallback to created_at date
                 }
              };
           }
@@ -609,7 +613,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     location: h.location,
                     note: h.remarks
                   })),
-                  createdAt: s.created_at
+                  createdAt: s.created_at,
+                  day: s.day || s.created_at?.split('T')[0] // Use day field, fallback to created_at date
                 }
              };
           }

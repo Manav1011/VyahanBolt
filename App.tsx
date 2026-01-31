@@ -9,6 +9,7 @@ import { BookParcel } from './views/BookParcel';
 import { ParcelList } from './views/ParcelList';
 import { ShipmentDetails } from './views/ShipmentDetails';
 import { Tracking } from './views/Tracking';
+import { Analytics } from './views/Analytics';
 import { OrganizationNotFound } from './views/OrganizationNotFound';
 import { UserRole } from './types';
 
@@ -88,6 +89,7 @@ const AppContent = () => {
         <Route path="/book" element={currentUser.role === UserRole.OFFICE_ADMIN ? <BookParcel /> : <Navigate to="/dashboard" replace />} />
         <Route path="/shipments" element={<ParcelList />} />
         <Route path="/shipments/:trackingId" element={<ShipmentDetails />} />
+        <Route path="/analytics" element={<Analytics />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

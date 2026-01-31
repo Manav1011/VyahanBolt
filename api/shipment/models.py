@@ -3,6 +3,7 @@ from django.db import models
 # Create your models here.
 
 from django.db import models
+from django.utils import timezone
 from core.models import BaseModel
 from organization.models import Organization, Branch, Bus
 import random
@@ -38,6 +39,7 @@ class Shipment(BaseModel):
     payment_mode = models.CharField(max_length=20, choices=PaymentMode.choices, default=PaymentMode.SENDER_PAYS)
     
     current_status = models.CharField(max_length=20, choices=ShipmentStatus.choices, default=ShipmentStatus.BOOKED)
+    day = models.DateField(default=timezone.now)
     
     def __str__(self):
         return f"{self.tracking_id} ({self.sender_name} -> {self.receiver_name})"

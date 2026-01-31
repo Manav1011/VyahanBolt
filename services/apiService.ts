@@ -123,3 +123,14 @@ export const getShipment = (trackingId: string) => publicApi.get(`/shipment/${tr
 export const updateShipmentStatus = (trackingId: string, status: string, remarks: string) =>
     publicApi.patch(`/shipment/${trackingId}/update-status/`, { status, remarks });
 export const trackShipment = (trackingId: string) => publicApi.get(`/shipment/track/${trackingId}/`);
+
+// Analytics APIs
+export const getOrganizationAnalytics = (filters: any) => {
+    const api = createApiClient();
+    return api.post('/analytics/organization/', filters);
+};
+
+export const getBranchAnalytics = (filters: any) => {
+    const api = createApiClient();
+    return api.post('/analytics/branch/', filters);
+};

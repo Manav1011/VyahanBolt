@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'core',
     'Auth',
     'organization',
-    'shipment'
+    'shipment',
+    'analytics'
 ]
 
 MIDDLEWARE = [

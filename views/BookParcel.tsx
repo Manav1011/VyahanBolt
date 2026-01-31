@@ -62,6 +62,7 @@ export const BookParcel: React.FC = () => {
         price: '',
         paymentMode: PaymentMode.SENDER_PAYS,
         busSlug: '',
+        day: new Date().toISOString().split('T')[0], // Default to today's date (YYYY-MM-DD)
     });
 
     const sourceOffice = offices.find(o => o.id === currentUser?.officeId);
@@ -152,6 +153,7 @@ export const BookParcel: React.FC = () => {
             price: Number(form.price),
             paymentMode: form.paymentMode,
             busSlug: form.busSlug, // Include bus selection
+            day: form.day, // Include shipment date
         });
 
         setIsLoading(false);
@@ -169,6 +171,7 @@ export const BookParcel: React.FC = () => {
                 price: '',
                 paymentMode: PaymentMode.SENDER_PAYS,
                 busSlug: '',
+                day: new Date().toISOString().split('T')[0], // Reset to today
             });
             setSelectedBus(null);
             setAvailableBuses([]);
@@ -224,6 +227,22 @@ export const BookParcel: React.FC = () => {
                                 </select>
                             </InputGroup>
                         </div>
+                    </div>
+
+                    {/* Shipment Date */}
+                    <div className="mt-6 pt-6 border-t border-slate-200">
+                        <InputGroup label="Shipment Date">
+                            <div className="relative">
+                                <Calendar className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                <input
+                                    type="date"
+                                    required
+                                    value={form.day}
+                                    onChange={e => setForm({ ...form, day: e.target.value })}
+                                    className="w-full pl-12 pr-4 p-4 bg-white/50 border border-slate-200 rounded-2xl text-sm font-brand text-slate-900 outline-none focus:border-[#F97316]/50 transition-all hover:bg-white"
+                                />
+                            </div>
+                        </InputGroup>
                     </div>
 
                     {/* Bus Selection */}
