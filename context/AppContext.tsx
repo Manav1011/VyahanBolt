@@ -66,7 +66,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const initApi = createApiClient();
 
       try {
-        const healthData = await initApi.get('/organization/info/');
+        const healthData = await initApi.get('/organization/info');
         // Backend returns: { message, data, error } with HTTP status code
         if (healthData.status === 200 && healthData.data) {
           setOrganization(healthData.data);
@@ -109,7 +109,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 // If admin, also fetch the full branch details
                 if (user.role === UserRole.SUPER_ADMIN) {
                   const adminApi = createApiClient(); // Use local since api useMemo might not be ready in exact same tick
-                  const adminBranches = await adminApi.get('/branch/list/');
+                  const adminBranches = await adminApi.get('/branch/list');
                   if (adminBranches.status === 200 && adminBranches.data) {
                     const mapped = adminBranches.data.map((b: any) => ({
                       id: b.slug,
@@ -122,7 +122,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   }
                 } else if (user.role === UserRole.OFFICE_ADMIN) {
                    const branchApi = createApiClient();
-                   const branchInfo = await branchApi.get('/branch/me/');
+                   const branchInfo = await branchApi.get('/branch/me');
                    if (branchInfo.status === 200 && branchInfo.data) {
                       const b = branchInfo.data;
                       setCurrentBranch({
@@ -259,7 +259,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchAdminBranches = useCallback(async () => {
     try {
-      const data = await api.get('/branch/list/');
+      const data = await api.get('/branch/list');
       // Backend returns: { message, data: [...], error } with HTTP status code
       if (data.status === 200 && data.data) {
         const mapped = data.data.map((b: any) => ({
@@ -278,7 +278,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchMyBranch = useCallback(async () => {
     try {
-      const data = await api.get('/branch/me/');
+      const data = await api.get('/branch/me');
       if (data.status === 200 && data.data) {
         const b = data.data;
         setCurrentBranch({
@@ -296,7 +296,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const processDayEnd = async () => {
     try {
-      const data = await api.post('/branch/day_end/');
+      const data = await api.post('/branch/day_end');
       if (data.status === 200 && data.data) {
         const b = data.data;
         setCurrentBranch({
@@ -316,7 +316,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addOffice = async (officeData: { name: string, password?: string }) => {
     try {
-      const data = await api.post('/branch/add/', {
+      const data = await api.post('/branch/add', {
         title: officeData.name,
         password: officeData.password || 'default_branch_pass'
       });
@@ -334,7 +334,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const deleteOffice = async (officeId: string) => {
     try {
-      const data = await api.delete(`/branch/${officeId}/delete/`);
+      const data = await api.delete(`/branch/${officeId}/delete`);
       if (data.status === 200 || data.status_code === 200) {
         await fetchAdminBranches();
         return { success: true, message: 'Office deleted' };
@@ -347,7 +347,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchBuses = useCallback(async () => {
     try {
-      const data = await api.get('/bus/list/');
+      const data = await api.get('/bus/list');
       if (data.status === 200 && data.data) {
         const mapped = data.data.map((b: any) => ({
           slug: b.slug,
@@ -365,7 +365,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const addBus = async (busData: { busNumber: string, preferredDays: number[], description?: string }) => {
     try {
-      const data = await api.post('/bus/add/', {
+      const data = await api.post('/bus/add', {
         bus_number: busData.busNumber,
         preferred_days: busData.preferredDays,
         description: busData.description || null
@@ -384,7 +384,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const deleteBus = async (busSlug: string) => {
     try {
       // Note: We might need to add a delete endpoint, but for now let's assume it exists
-      const data = await api.delete(`/bus/${busSlug}/delete/`);
+      const data = await api.delete(`/bus/${busSlug}/delete`);
       if (data.status === 200 || data.status_code === 200) {
         await fetchBuses();
         return { success: true, message: 'Bus deleted successfully' };
@@ -407,8 +407,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       // Use different endpoints based on user role
       const endpoint = currentUser.role === UserRole.SUPER_ADMIN 
-        ? '/shipment/list/' 
-        : '/shipment/branch/list/';
+        ? '/shipment/list' 
+        : '/shipment/branch/list';
       
       console.log("Fetching parcels from:", endpoint, "for user:", currentUser.role);
       const data = await api.get(endpoint);
@@ -461,7 +461,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const createParcel = async (data: any) => {
     try {
-      const resp = await api.post('/shipment/create/', {
+      const resp = await api.post('/shipment/create', {
         sender_name: data.senderName,
         sender_phone: data.senderPhone,
         receiver_name: data.receiverName,
@@ -548,7 +548,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateParcelStatus = async (trackingId: string, newStatus: ParcelStatus, note: string = '') => {
     try {
       // Use authenticated API client instead of apiService function
-      const resp = await api.patch(`/shipment/${trackingId}/update-status/`, {
+      const resp = await api.patch(`/shipment/${trackingId}/update-status`, {
         status: newStatus,
         remarks: note
       });
@@ -600,7 +600,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try {
           // Public endpoint - use publicApi for unauthenticated access
           const publicApi = createApiClient();
-          const res = await publicApi.get(`/shipment/track/${id}/`);
+          const res = await publicApi.get(`/shipment/track/${id}`);
           if (res.status === 200 && res.data) {
              const s = res.data;
              return {
@@ -645,7 +645,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       },
       getShipmentDetails: async (id: string) => {
         try {
-          const res = await api.get(`/shipment/${id}/`);
+          const res = await api.get(`/shipment/${id}`);
           if (res.status === 200 && res.data) {
              const s = res.data;
              return {

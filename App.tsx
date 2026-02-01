@@ -12,7 +12,20 @@ import { Tracking } from './views/Tracking';
 import { Analytics } from './views/Analytics';
 import { OrganizationNotFound } from './views/OrganizationNotFound';
 import { UserRole } from './types';
+import { useEffect } from 'react';
 
+// Component to redirect routes with trailing slashes while preserving params
+const RedirectTrailingSlashRoute = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const pathWithoutSlash = location.pathname.slice(0, -1);
+    navigate(pathWithoutSlash + (location.search || '') + (location.hash || ''), { replace: true });
+  }, [location.pathname, location.search, location.hash, navigate]);
+  
+  return null;
+};
 
 const TrackingPageWrapper = ({ currentUser }: { currentUser: any }) => {
   const navigate = useNavigate();
@@ -42,6 +55,17 @@ const TrackingPageWrapper = ({ currentUser }: { currentUser: any }) => {
 
 const AppContent = () => {
   const { currentUser, organization, loading } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Redirect any route ending with / to the same route without trailing slash
+  useEffect(() => {
+    if (location.pathname !== '/' && location.pathname.endsWith('/')) {
+      const newPath = location.pathname.slice(0, -1) + (location.search || '') + (location.hash || '');
+      navigate(newPath, { replace: true });
+      return;
+    }
+  }, [location.pathname, location.search, location.hash, navigate]);
 
   if (loading) {
     return (
@@ -58,7 +82,6 @@ const AppContent = () => {
     return <OrganizationNotFound />;
   }
 
-  const location = useLocation();
   const isPublicTracking = location.pathname.startsWith('/track/');
   const isTrackingPage = location.pathname === '/tracking';
 
@@ -66,7 +89,9 @@ const AppContent = () => {
   if (isPublicTracking || isTrackingPage) {
       return (
         <Routes>
+          <Route path="/track/:trackingId/" element={<RedirectTrailingSlashRoute />} />
           <Route path="/track/:trackingId" element={<TrackingPageWrapper currentUser={currentUser} />} />
+          <Route path="/tracking/" element={<Navigate to="/tracking" replace />} />
           <Route path="/tracking" element={<TrackingPageWrapper currentUser={currentUser} />} />
           <Route path="*" element={<Navigate to="/tracking" replace />} />
         </Routes>
@@ -82,6 +107,7 @@ const AppContent = () => {
   if (currentUser.role === UserRole.PUBLIC) {
     return (
       <Routes>
+        <Route path="/tracking/" element={<Navigate to="/tracking" replace />} />
         <Route path="/tracking" element={
           <div className="min-h-screen bg-slate-50">
             <header className="bg-white border-b px-6 py-4 flex justify-between items-center">
@@ -102,12 +128,19 @@ const AppContent = () => {
   return (
     <Layout>
       <Routes>
+        <Route path="/dashboard/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/offices/" element={<Navigate to="/offices" replace />} />
         <Route path="/offices" element={currentUser.role === UserRole.SUPER_ADMIN ? <Offices /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/buses/" element={<Navigate to="/buses" replace />} />
         <Route path="/buses" element={currentUser.role === UserRole.SUPER_ADMIN ? <Buses /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/book/" element={<Navigate to="/book" replace />} />
         <Route path="/book" element={currentUser.role === UserRole.OFFICE_ADMIN ? <BookParcel /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/shipments/" element={<Navigate to="/shipments" replace />} />
         <Route path="/shipments" element={<Navigate to="/analytics" replace />} />
+        <Route path="/shipments/:trackingId/" element={<RedirectTrailingSlashRoute />} />
         <Route path="/shipments/:trackingId" element={<ShipmentDetails />} />
+        <Route path="/analytics/" element={<Navigate to="/analytics" replace />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
