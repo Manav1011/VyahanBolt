@@ -1,7 +1,7 @@
 import time
 import uuid
 from django_bolt import JSON
-from django_bolt.auth import JWTAuthentication, InMemoryRevocation
+from django_bolt.auth import JWTAuthentication, InMemoryRevocation, DjangoCacheRevocation
 from django.contrib.auth.models import User
 from django_bolt.exceptions import HTTPException
 
@@ -47,5 +47,5 @@ async def get_current_user(request):
 
     
 # Revocation store for blacklisting tokens (use DjangoCacheRevocation or DjangoORMRevocation for production)
-store = InMemoryRevocation()
+store = DjangoCacheRevocation()
 jwt_auth = JWTAuthentication(revocation_store=store, require_jti=True)
