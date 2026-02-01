@@ -47,5 +47,5 @@ async def get_current_user(request):
 
     
 # Revocation store for blacklisting tokens (use DjangoCacheRevocation or DjangoORMRevocation for production)
-store = DjangoCacheRevocation()
+store=InMemoryRevocation()
 jwt_auth = JWTAuthentication(revocation_store=store, require_jti=True)

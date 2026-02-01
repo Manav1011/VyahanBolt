@@ -27,6 +27,9 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-mqv0!hq+=rr@b3598q+1a@^_ir
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+ALLOWED_HOSTS = []
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -74,7 +77,6 @@ WSGI_APPLICATION = 'VyahanBolt.wsgi.application'
 
 ALLOWED_HOSTS = [
     ".vyahan.local",
-    ".vyahan.mnv-dev.site",
     "localhost",
     "127.0.0.1",
 ]
