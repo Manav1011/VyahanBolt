@@ -91,7 +91,7 @@ export const BookParcel: React.FC = () => {
             setLoadingBuses(true);
             try {
                 // Fetch all buses in the organization
-                const res = await api.get('/bus/list');
+                const res = await api.get('/bus/list/');
                 if (res.status === 200 && res.data) {
                     const mappedBuses = res.data.map((b: any) => ({
                         slug: b.slug,
