@@ -8,13 +8,6 @@ import { useNavigate } from 'react-router-dom';
 // Component to manage and list parcels with status transition actions
 export const ParcelList: React.FC = () => {
    const { parcels, currentUser, updateParcelStatus, getOfficeName, offices, fetchParcels } = useApp();
-   
-   // Fetch parcels when component mounts
-   useEffect(() => {
-     if (currentUser) {
-       fetchParcels();
-     }
-   }, [currentUser, fetchParcels]);
    const navigate = useNavigate();
    const myOfficeId = currentUser?.officeId;
    const isSuper = currentUser?.role === UserRole.SUPER_ADMIN;
@@ -26,14 +19,15 @@ export const ParcelList: React.FC = () => {
      console.log("ParcelList - myOfficeId:", myOfficeId);
      console.log("ParcelList - isSuper:", isSuper);
    }, [parcels, currentUser, myOfficeId, isSuper]);
-   
-   const myParcels = parcels.filter(p => {
-     const matches = isSuper || p.sourceOfficeId === myOfficeId || p.destinationOfficeId === myOfficeId;
-     if (!matches) {
-       console.log("Parcel filtered out:", p.trackingId, "source:", p.sourceOfficeId, "dest:", p.destinationOfficeId, "myOfficeId:", myOfficeId);
-     }
-     return matches;
-   });
+      const myParcels = parcels.filter(p => {
+      // For office admins, we trust the backend to have only sent relevant parcels.
+      // We still filter for Super Admin just in case, but they see everything anyway.
+      if (isSuper) return true;
+      
+      // Safety check: only show if branch is source or destination (should always be true from backend anyway)
+      // but use slug-based matching now that myOfficeId is correctly set to slug in AppContext
+      return p.sourceOfficeId === myOfficeId || p.destinationOfficeId === myOfficeId;
+    });
    
    console.log("ParcelList - myParcels count:", myParcels.length, "total parcels:", parcels.length);
 

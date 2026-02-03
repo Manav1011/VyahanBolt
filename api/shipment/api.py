@@ -8,6 +8,7 @@ from organization.serializers import BusSerializer
 from core.sms_service import async_send_sms
 from django.db.models import Q
 from django.utils import timezone
+from datetime import datetime, timedelta
 from django_bolt.auth import IsAuthenticated, HasPermission
 
 # Protected Routes - uses OrganizationMiddleware to get organization from subdomain
@@ -181,14 +182,19 @@ async def list_shipments_organization(request):
             error="Organization context missing"
         )
     
-    # Get all shipments for the organization
+    # Get shipments for the last 7 days only for the active list
+    seven_days_ago = timezone.now().date() - timedelta(days=7)
+    
     shipments = []
     async for shipment in Shipment.objects.select_related(
         'source_branch__owner',
         'destination_branch__owner',
         'organization',
         'bus'
-    ).prefetch_related('history').filter(organization=organization):
+    ).prefetch_related('history').filter(
+        organization=organization,
+        day__gte=seven_days_ago
+    ).order_by('-created_at'):
         shipment_serialized = ShipmentSerializer.fields("list").from_model(shipment)
         shipments.append(shipment_serialized)
     
@@ -229,7 +235,9 @@ async def list_shipments_branch(request, user=Depends(get_current_user)):
             error="Branch does not belong to this organization"
         )
     
-    # Filter shipments where branch is source or destination
+    # Filter shipments where branch is source or destination AND within last 7 days
+    seven_days_ago = timezone.now().date() - timedelta(days=7)
+    
     shipments = []
     async for shipment in Shipment.objects.select_related(
         'source_branch__owner',
@@ -238,8 +246,9 @@ async def list_shipments_branch(request, user=Depends(get_current_user)):
         'bus'
     ).prefetch_related('history').filter(
         Q(source_branch=branch) | Q(destination_branch=branch),
-        organization=organization
-    ):
+        organization=organization,
+        day__gte=seven_days_ago
+    ).order_by('-created_at'):
         shipment_serialized = ShipmentSerializer.fields("list").from_model(shipment)
         shipments.append(shipment_serialized)
     

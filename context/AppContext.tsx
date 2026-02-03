@@ -60,13 +60,114 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     navigate('/');
   }), [navigate]);
 
+  const fetchAdminBranches = useCallback(async () => {
+    try {
+      const data = await api.get('/branch/list');
+      // Backend returns: { message, data: [...], error } with HTTP status code
+      if (data.status === 200 && data.data) {
+        const mapped = data.data.map((b: any) => ({
+          id: b.slug,
+          name: b.title,
+          username: b.owner?.username || '', // Store owner username for login
+          currentOperationalDate: b.current_operational_date,
+          lastDayEndAt: b.last_day_end_at
+        }));
+        setOffices(mapped);
+      }
+    } catch (e) {
+      console.error("Failed to fetch admin branches:", e);
+    }
+  }, [api]);
+
+  const fetchMyBranch = useCallback(async () => {
+    try {
+      const data = await api.get('/branch/me');
+      if (data.status === 200 && data.data) {
+        const b = data.data;
+        setCurrentBranch({
+          id: b.slug,
+          name: b.title,
+          username: b.owner?.username || '',
+          currentOperationalDate: b.current_operational_date,
+          lastDayEndAt: b.last_day_end_at
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch my branch:", e);
+    }
+  }, [api]);
+
+  const fetchParcels = useCallback(async (userOverride?: User) => {
+    const userToUse = userOverride || currentUser;
+    // Don't fetch if user is not logged in
+    if (!userToUse) {
+      console.log("Cannot fetch parcels: user not logged in");
+      return;
+    }
+
+    try {
+      // Use different endpoints based on user role
+      const endpoint = userToUse.role === UserRole.SUPER_ADMIN
+        ? '/shipment/list/'
+        : '/shipment/branch/list/';
+
+      console.log("Fetching parcels from:", endpoint, "for user:", userToUse.role);
+      const data = await api.get(endpoint.replace(/\/$/, ""));
+      console.log("Parcels API response:", data);
+
+      if (data.status === 200 && data.data) {
+        // Backend now returns full fields in "list" field set
+        const mapped: Parcel[] = data.data.map((s: any) => ({
+          slug: s.slug,
+          trackingId: s.tracking_id,
+          senderName: s.sender_name,
+          senderPhone: s.sender_phone,
+          receiverName: s.receiver_name,
+          receiverPhone: s.receiver_phone,
+          // Backend returns nested branch objects: { slug, title }
+          sourceOfficeId: s.source_branch?.slug || s.source_branch,
+          destinationOfficeId: s.destination_branch?.slug || s.destination_branch,
+          sourceOfficeTitle: s.source_branch?.title || '',
+          destinationOfficeTitle: s.destination_branch?.title || '',
+          description: s.description || '',
+          paymentMode: s.payment_mode as PaymentMode,
+          price: Number(s.price),
+          currentStatus: s.current_status as ParcelStatus,
+          bus: s.bus ? {
+            slug: s.bus.slug,
+            busNumber: s.bus.bus_number,
+            preferredDays: s.bus.preferred_days || [],
+            description: s.bus.description
+          } : undefined,
+          history: (s.history || []).map((h: any) => ({
+            status: h.status as ParcelStatus,
+            timestamp: new Date(h.created_at).getTime(),
+            location: h.location,
+            note: h.remarks || ''
+          })),
+          createdAt: s.created_at,
+          day: s.day || s.created_at?.split('T')[0] // Use day field, fallback to created_at date
+        }));
+        console.log("Mapped parcels:", mapped);
+        setParcels(mapped);
+      } else {
+        console.warn("Unexpected response status or missing data:", data);
+        setParcels([]);
+      }
+    } catch (e: any) {
+      console.error("Failed to fetch shipments:", e);
+      setParcels([]);
+    }
+  }, [api, currentUser]);
+
+
   useEffect(() => {
     const initializeApp = async () => {
       // Use a temporary client for initial setup (without logout yet)
       const initApi = createApiClient();
 
       try {
-        const healthData = await initApi.get('/organization/info/');
+        const healthData = await initApi.get('/organization/info');
         // Backend returns: { message, data, error } with HTTP status code
         if (healthData.status === 200 && healthData.data) {
           setOrganization(healthData.data);
@@ -102,14 +203,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     ? healthData.data.title
                     : mappedOffices.find((o: any) => o.id === userId)?.name || 'Branch Manager',
                   role: loginType === 'organization' ? UserRole.SUPER_ADMIN : UserRole.OFFICE_ADMIN,
-                  officeId: loginType === 'branch' ? userId : undefined
+                  officeId: loginType === 'branch' ? (mappedOffices.find((o: any) => o.id === userId)?.id || userId) : undefined
                 };
                 setCurrentUser(user);
 
                 // If admin, also fetch the full branch details
                 if (user.role === UserRole.SUPER_ADMIN) {
-                  const adminApi = createApiClient(); // Use local since api useMemo might not be ready in exact same tick
-                  const adminBranches = await adminApi.get('/branch/list/');
+                  const adminApi = createApiClient(); 
+                  const adminBranches = await adminApi.get('/branch/list');
                   if (adminBranches.status === 200 && adminBranches.data) {
                     const mapped = adminBranches.data.map((b: any) => ({
                       id: b.slug,
@@ -122,9 +223,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                   }
                 } else if (user.role === UserRole.OFFICE_ADMIN) {
                    const branchApi = createApiClient();
-                   const branchInfo = await branchApi.get('/branch/me/');
+                   const branchInfo = await branchApi.get('/branch/me');
                    if (branchInfo.status === 200 && branchInfo.data) {
                       const b = branchInfo.data;
+                      
+                      // Update user info with fresh branch data
+                      const finalUser = {
+                        ...user,
+                        name: b.title,
+                        officeId: b.slug
+                      };
+                      setCurrentUser(finalUser);
+                      
                       setCurrentBranch({
                          id: b.slug,
                          name: b.title,
@@ -132,7 +242,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                          currentOperationalDate: b.current_operational_date,
                          lastDayEndAt: b.last_day_end_at
                       });
+
+                      // Fetch parcels only once here
+                      fetchParcels(finalUser);
                    }
+                } else {
+                   // For Super Admin or catch-all, fetch parcels now
+                   fetchParcels(user);
                 }
               } else {
                 localStorage.removeItem('access_token');
@@ -152,7 +268,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     initializeApp();
-    // Note: fetchParcels will be called after login or when components mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Helper to log "SMS"
@@ -257,42 +373,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     navigate('/');
   }, [navigate]);
 
-  const fetchAdminBranches = useCallback(async () => {
-    try {
-      const data = await api.get('/branch/list/');
-      // Backend returns: { message, data: [...], error } with HTTP status code
-      if (data.status === 200 && data.data) {
-        const mapped = data.data.map((b: any) => ({
-          id: b.slug,
-          name: b.title,
-          username: b.owner?.username || '', // Store owner username for login
-          currentOperationalDate: b.current_operational_date,
-          lastDayEndAt: b.last_day_end_at
-        }));
-        setOffices(mapped);
-      }
-    } catch (e) {
-      console.error("Failed to fetch admin branches:", e);
-    }
-  }, [api]);
-
-  const fetchMyBranch = useCallback(async () => {
-    try {
-      const data = await api.get('/branch/me/');
-      if (data.status === 200 && data.data) {
-        const b = data.data;
-        setCurrentBranch({
-          id: b.slug,
-          name: b.title,
-          username: b.owner?.username || '',
-          currentOperationalDate: b.current_operational_date,
-          lastDayEndAt: b.last_day_end_at
-        });
-      }
-    } catch (e) {
-      console.error("Failed to fetch my branch:", e);
-    }
-  }, [api]);
 
   const processDayEnd = async () => {
     try {
@@ -397,67 +477,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const getOfficeName = (id: string) => offices.find(o => o.id === id)?.name || 'Unknown Office';
 
-  const fetchParcels = useCallback(async () => {
-    // Don't fetch if user is not logged in
-    if (!currentUser) {
-      console.log("Cannot fetch parcels: user not logged in");
-      return;
-    }
-
-    try {
-      // Use different endpoints based on user role
-      const endpoint = currentUser.role === UserRole.SUPER_ADMIN 
-        ? '/shipment/list/' 
-        : '/shipment/branch/list/';
-      
-      console.log("Fetching parcels from:", endpoint, "for user:", currentUser.role);
-      const data = await api.get(endpoint);
-      console.log("Parcels API response:", data);
-      
-      if (data.status === 200 && data.data) {
-        // Backend now returns full fields in "list" field set
-        const mapped: Parcel[] = data.data.map((s: any) => ({
-          slug: s.slug,
-          trackingId: s.tracking_id,
-          senderName: s.sender_name,
-          senderPhone: s.sender_phone,
-          receiverName: s.receiver_name,
-          receiverPhone: s.receiver_phone,
-          // Backend returns nested branch objects: { slug, title }
-          sourceOfficeId: s.source_branch?.slug || s.source_branch,
-          destinationOfficeId: s.destination_branch?.slug || s.destination_branch,
-          sourceOfficeTitle: s.source_branch?.title || '',
-          destinationOfficeTitle: s.destination_branch?.title || '',
-          description: s.description || '',
-          paymentMode: s.payment_mode as PaymentMode,
-          price: Number(s.price),
-          currentStatus: s.current_status as ParcelStatus,
-          bus: s.bus ? {
-            slug: s.bus.slug,
-            busNumber: s.bus.bus_number,
-            preferredDays: s.bus.preferred_days || [],
-            description: s.bus.description
-          } : undefined,
-          history: (s.history || []).map((h: any) => ({
-            status: h.status as ParcelStatus,
-            timestamp: new Date(h.created_at).getTime(),
-            location: h.location,
-            note: h.remarks || ''
-          })),
-          createdAt: s.created_at,
-          day: s.day || s.created_at?.split('T')[0] // Use day field, fallback to created_at date
-        }));
-        console.log("Mapped parcels:", mapped);
-        setParcels(mapped);
-      } else {
-        console.warn("Unexpected response status or missing data:", data);
-        setParcels([]);
-      }
-    } catch (e: any) {
-      console.error("Failed to fetch shipments:", e);
-      setParcels([]);
-    }
-  }, [api, currentUser]);
 
   const createParcel = async (data: any) => {
     try {

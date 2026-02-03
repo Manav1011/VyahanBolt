@@ -20,6 +20,12 @@ async def login(credentials: LoginRequest):
         password=credentials.password
     )
 
+    if user is None:
+        return response(
+            status=401,
+            message="Unauthorized",
+            error="Invalid username or password"
+        )
     # check the type    
     login_type = credentials.login_type
     if login_type == "organization":
@@ -39,13 +45,6 @@ async def login(credentials: LoginRequest):
                 message="Unauthorized",
                 error="Invalid username or password"
             )       
-        
-    if user is None:
-        return response(
-            status=401,
-            message="Unauthorized",
-            error="Invalid username or password"
-        )
 
 
     tokens = create_jwt_pair_for_user(user, extra_claims={"permissions": list(await user.aget_all_permissions()), "login_type": login_type})

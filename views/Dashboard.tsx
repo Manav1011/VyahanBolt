@@ -5,14 +5,9 @@ import { ArrowRight, Package, Truck, CheckCircle, Clock, TrendingUp, Zap, Map, S
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard: React.FC = () => {
-  const { parcels, currentUser, organization, fetchParcels, offices, currentBranch, processDayEnd } = useApp();
+  const { parcels, currentUser, organization, fetchParcels, offices, currentBranch, processDayEnd, updateParcelStatus } = useApp();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchParcels();
-    }
-  }, [currentUser, fetchParcels]);
 
   // Filter parcels by role and date (use operational date for branches)
   const getWorkingDate = () => {
@@ -23,16 +18,28 @@ export const Dashboard: React.FC = () => {
     return today.toISOString().split('T')[0];
   };
 
-  const isToday = (dateString: string | undefined) => {
+  const isWithinLast7Days = (dateString: string | undefined) => {
     if (!dateString) return false;
-    const dateOnly = dateString.split('T')[0];
-    return dateOnly === getWorkingDate();
+    const parcelDate = new Date(dateString.split('T')[0]);
+    const workingDate = new Date(getWorkingDate());
+    
+    // Set both to midnight for accurate day-based comparison
+    parcelDate.setHours(0, 0, 0, 0);
+    workingDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = workingDate.getTime() - parcelDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Return true if within last 7 days (0 = today)
+    return diffDays >= 0 && diffDays < 7;
   };
 
   const relevantParcels = (currentUser?.role === UserRole.SUPER_ADMIN
     ? parcels
-    : parcels.filter(p => p.sourceOfficeId === currentUser?.officeId || p.destinationOfficeId === currentUser?.officeId)
-  ).filter(p => isToday(p.day || p.createdAt));
+    : parcels // Backend already filters for branch admins
+  )
+    .filter(p => isWithinLast7Days(p.day || p.createdAt))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const stats = {
     total: relevantParcels.length,
@@ -58,7 +65,50 @@ export const Dashboard: React.FC = () => {
         <p className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em] break-words">{label}</p>
       </div>
     </div>
-  );
+  ); // Closing tag for StatCard component
+
+  const renderActionShortcut = (parcel: any) => {
+    if (currentUser?.role === UserRole.SUPER_ADMIN) return null;
+    
+    const myOfficeId = currentUser?.officeId;
+    const isSource = parcel.sourceOfficeId === myOfficeId;
+    const isDest = parcel.destinationOfficeId === myOfficeId;
+
+    if (isSource && parcel.currentStatus === ParcelStatus.BOOKED) {
+      return (
+        <button
+          onClick={async (e) => {
+            e.stopPropagation();
+            const res = await updateParcelStatus(parcel.trackingId, ParcelStatus.IN_TRANSIT, "Dispatched from dashboard");
+            if (!res.success) alert(res.message);
+          }}
+          className="px-3 py-1.5 bg-slate-950 text-white text-[9px] font-bold uppercase tracking-[0.1em] border-l-2 border-orange-500 hover:bg-orange-600 transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap"
+        >
+          Mark as In Transit
+        </button>
+      );
+    }
+
+    if (isDest && parcel.currentStatus === ParcelStatus.IN_TRANSIT) {
+      return (
+        <button
+          onClick={async (e) => {
+            e.stopPropagation();
+            const res = await updateParcelStatus(parcel.trackingId, ParcelStatus.ARRIVED, "Arrived at destination");
+            if (!res.success) alert(res.message);
+          }}
+          className="px-3 py-1.5 bg-slate-950 text-white text-[9px] font-bold uppercase tracking-[0.1em] border-l-2 border-sky-500 hover:bg-sky-600 transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap"
+        >
+          Mark as Arrived
+        </button>
+      );
+    }
+    return (
+      <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest italic group-hover:text-slate-400 transition-colors">
+        No Action Required
+      </span>
+    );
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6 md:space-y-8 animate-in fade-in duration-700 pt-2 md:pt-0">
@@ -156,7 +206,7 @@ export const Dashboard: React.FC = () => {
         <div className="px-4 sm:px-6 md:px-10 py-4 sm:py-6 md:py-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 bg-slate-50/50">
           <div className="flex-1 min-w-0">
             <h3 className="font-brand font-bold text-lg sm:text-xl md:text-2xl text-slate-900 tracking-tight">Recent Shipments</h3>
-            <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mt-1">Latest shipping activity</p>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mt-1">Activity from the last 7 days</p>
           </div>
           <button 
             onClick={() => navigate('/analytics')} 
@@ -172,8 +222,8 @@ export const Dashboard: React.FC = () => {
             <div className="bg-slate-50 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-6 sm:mb-8 border border-slate-200">
               <Package className="w-8 h-8 sm:w-10 sm:h-10 text-slate-300" />
             </div>
-            <h3 className="text-lg sm:text-xl font-bold font-brand text-slate-800 mb-2">No shipments today</h3>
-            <p className="text-slate-500 max-w-xs mx-auto text-xs sm:text-sm leading-relaxed">There are no shipments logged for today yet.</p>
+            <h3 className="text-lg sm:text-xl font-bold font-brand text-slate-800 mb-2">No recent shipments</h3>
+            <p className="text-slate-500 max-w-xs mx-auto text-xs sm:text-sm leading-relaxed">There are no shipments logged for the last 7 days.</p>
           </div>
         ) : (
           <>
@@ -201,6 +251,9 @@ export const Dashboard: React.FC = () => {
                      `}>
                       {parcel.currentStatus.toLowerCase().replace('_', ' ')}
                     </span>
+                  </div>
+                  <div className="flex justify-end pt-1 px-4 mb-3">
+                    {renderActionShortcut(parcel)}
                   </div>
                   
                   <div className="pl-13 space-y-2">
@@ -230,6 +283,7 @@ export const Dashboard: React.FC = () => {
                     <th className="px-6 lg:px-10 py-4 lg:py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Status</th>
                     <th className="px-6 lg:px-10 py-4 lg:py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Route</th>
                     <th className="px-6 lg:px-10 py-4 lg:py-5 text-[10px] font-bold uppercase tracking-widest font-brand">Date</th>
+                    <th className="px-6 lg:px-10 py-4 lg:py-5 text-[10px] font-bold uppercase tracking-widest font-brand text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -252,22 +306,25 @@ export const Dashboard: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 lg:px-10 py-4 lg:py-6">
-                        <span className={`inline-flex items-center px-3 lg:px-4 py-1 lg:py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest
-                            ${parcel.currentStatus === ParcelStatus.ARRIVED ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-sm shadow-emerald-500/5' :
-                            parcel.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-500/10 text-sky-600 border border-sky-500/20' :
-                               'bg-slate-100 text-slate-500 border border-slate-200'}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-none border-l-2 text-[8px] font-bold uppercase tracking-widest
+                            ${parcel.currentStatus === ParcelStatus.ARRIVED ? 'bg-emerald-50 text-emerald-600 border-emerald-500' :
+                            parcel.currentStatus === ParcelStatus.IN_TRANSIT ? 'bg-sky-50 text-sky-600 border-sky-500' :
+                               'bg-slate-50 text-slate-500 border-slate-300'}
                          `}>
                           {parcel.currentStatus.toLowerCase().replace('_', ' ')}
                         </span>
                       </td>
                       <td className="px-6 lg:px-10 py-4 lg:py-6">
                          <div className="flex items-center gap-2 lg:gap-3">
-                            <span className="text-xs font-bold text-slate-500 truncate max-w-[120px]">{parcel.sourceOfficeTitle || parcel.sourceOfficeId}</span>
-                            <ArrowRight className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[#F97316] flex-shrink-0" />
-                            <span className="text-xs font-bold text-slate-900 bg-orange-50 px-2 lg:px-3 py-1 rounded-lg border border-orange-100 truncate max-w-[120px]">{parcel.destinationOfficeTitle || parcel.destinationOfficeId}</span>
+                            <span className="text-[11px] font-bold text-slate-500 truncate max-w-[120px]">{parcel.sourceOfficeTitle || parcel.sourceOfficeId}</span>
+                            <ArrowRight className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                            <span className="text-[11px] font-bold text-slate-900 truncate max-w-[120px]">{parcel.destinationOfficeTitle || parcel.destinationOfficeId}</span>
                          </div>
                       </td>
-                      <td className="px-6 lg:px-10 py-4 lg:py-6 text-xs text-slate-400 font-bold font-brand">{new Date(parcel.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                      <td className="px-6 lg:px-10 py-4 lg:py-6 text-[11px] text-slate-400 font-bold font-brand">{new Date(parcel.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+                      <td className="px-6 lg:px-10 py-4 lg:py-6 text-right">
+                        {renderActionShortcut(parcel)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

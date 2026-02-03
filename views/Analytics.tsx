@@ -16,12 +16,14 @@ import {
   CreditCard,
   ArrowRight,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Truck,
+  MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const Analytics: React.FC = () => {
-  const { currentUser, offices, buses, fetchAdminBranches, fetchBuses } = useApp();
+  const { currentUser, offices, buses, fetchAdminBranches, fetchBuses, updateParcelStatus } = useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
@@ -151,6 +153,67 @@ export const Analytics: React.FC = () => {
       default:
         return 'bg-slate-100 text-slate-500 border-slate-200';
     }
+  };
+  const handleUpdateStatus = async (trackingId: string, newStatus: ParcelStatus, remarks: string) => {
+    const res = await updateParcelStatus(trackingId, newStatus, remarks);
+    if (res.success) {
+      // Manually update the local state to show the change
+      setAnalyticsData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          data: prev.data.map(item => 
+            item.tracking_id === trackingId 
+              ? { ...item, current_status: newStatus } 
+              : item
+          )
+        };
+      });
+    } else {
+      alert(res.message);
+    }
+  };
+
+  const renderActionShortcut = (item: any) => {
+    if (isSuperAdmin) return null;
+    
+    const myOfficeId = currentUser?.officeId;
+    const isSource = item.source_branch?.slug === myOfficeId;
+    const isDest = item.destination_branch?.slug === myOfficeId;
+
+    if (isSource && item.current_status === ParcelStatus.BOOKED) {
+      return (
+        <button
+          onClick={async (e) => {
+            e.stopPropagation();
+            await handleUpdateStatus(item.tracking_id, ParcelStatus.IN_TRANSIT, "Dispatched from analytics");
+          }}
+          className="px-3 py-1 bg-slate-950 text-white text-[9px] font-bold uppercase tracking-[0.1em] border-l-2 border-orange-500 hover:bg-orange-600 transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap"
+        >
+          Mark as In Transit
+        </button>
+      );
+    }
+
+    if (isDest && item.current_status === ParcelStatus.IN_TRANSIT) {
+      return (
+        <button
+          onClick={async (e) => {
+            e.stopPropagation();
+            await handleUpdateStatus(item.tracking_id, ParcelStatus.ARRIVED, "Arrived at destination");
+          }}
+          className="px-3 py-1 bg-slate-950 text-white text-[9px] font-bold uppercase tracking-[0.1em] border-l-2 border-sky-500 hover:bg-sky-600 transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap"
+        >
+          Mark as Arrived
+        </button>
+      );
+    }
+
+    return (
+      <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest italic">
+        No Action
+      </span>
+    );
   };
 
   return (
@@ -413,6 +476,10 @@ export const Analytics: React.FC = () => {
                       </div>
                     </div>
 
+                    <div className="flex justify-end mb-3">
+                       {renderActionShortcut(item)}
+                    </div>
+
                     <div className="space-y-2">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
@@ -471,14 +538,14 @@ export const Analytics: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-100">
-                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Tracking ID</th>
+                     <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Tracking ID</th>
                     <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Date</th>
-                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">To Name/Mobile</th>
-                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">From Name/Mobile</th>
-                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Bus No</th>
-                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Time</th>
-                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Paid Amount</th>
-                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">To Pay</th>
+                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">To</th>
+                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">From</th>
+                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Prices</th>
+                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Status</th>
+                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand">Route</th>
+                    <th className="px-4 lg:px-6 py-3 text-[10px] font-bold uppercase tracking-widest font-brand text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -488,62 +555,67 @@ export const Analytics: React.FC = () => {
                     
                     return (
                       <React.Fragment key={item.slug}>
-                        {/* First Row */}
                         <tr 
                           className="hover:bg-slate-50 transition-all group cursor-pointer"
                           onClick={() => navigate(`/shipments/${item.tracking_id}`)}
                         >
                           <td className="px-4 lg:px-6 py-4" rowSpan={2}>
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#F97316] group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
+                              <div className="w-8 h-8 rounded-none bg-slate-950 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
                                 <Package className="w-4 h-4" />
                               </div>
-                              <span className="font-brand font-bold text-sm text-slate-900">{item.tracking_id}</span>
+                              <span className="font-brand font-bold text-sm text-slate-900 tracking-tight">{item.tracking_id}</span>
                             </div>
                           </td>
-                          <td className="px-4 lg:px-6 py-4 text-xs text-slate-900 font-medium">
+                          <td className="px-4 lg:px-6 py-4 text-xs text-slate-900 font-bold font-brand">
                             {formatDate(item.day || item.created_at)}
                           </td>
-                          <td className="px-4 lg:px-6 py-4 text-xs text-slate-900 font-medium">
-                            <div>
-                              <div className="font-bold">{item.receiver_name}</div>
-                              <div className="text-slate-500 text-[10px]">{item.receiver_phone}</div>
-                              {item.destination_branch && (
-                                <div className="text-slate-400 text-[9px] font-medium mt-0.5">{item.destination_branch.title}</div>
-                              )}
+                          <td className="px-4 lg:px-6 py-4 text-xs">
+                            <div className="font-bold text-slate-800">{item.receiver_name}</div>
+                            <div className="text-slate-500 text-[10px] font-bold">{item.receiver_phone}</div>
+                          </td>
+                          <td className="px-4 lg:px-6 py-4 text-xs">
+                            <div className="font-bold text-slate-800">{item.sender_name}</div>
+                            <div className="text-slate-500 text-[10px] font-bold">{item.sender_phone}</div>
+                          </td>
+                          <td className="px-4 lg:px-6 py-4">
+                            <div className="flex flex-col gap-1">
+                              {paidAmount > 0 && <div className="text-[10px] font-bold text-emerald-600">PAID: {formatCurrency(paidAmount.toString())}</div>}
+                              {toPay > 0 && <div className="text-[10px] font-bold text-orange-600">TOPAY: {formatCurrency(toPay.toString())}</div>}
                             </div>
                           </td>
-                          <td className="px-4 lg:px-6 py-4 text-xs text-slate-900 font-medium">
-                            <div>
-                              <div className="font-bold">{item.sender_name}</div>
-                              <div className="text-slate-500 text-[10px]">{item.sender_phone}</div>
-                              {item.source_branch && (
-                                <div className="text-slate-400 text-[9px] font-medium mt-0.5">{item.source_branch.title}</div>
-                              )}
+                          <td className="px-4 lg:px-6 py-4">
+                            <span className={`inline-flex items-center w-fit px-2 py-0.5 rounded-none border-l-2 text-[8px] font-bold uppercase tracking-widest ${getStatusColor(item.current_status)}`}>
+                              {item.current_status.toLowerCase().replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-4 lg:px-6 py-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold text-slate-500 truncate max-w-[80px]">{item.source_branch?.title || 'Source'}</span>
+                              <ArrowRight className="w-3 h-3 text-orange-500" />
+                              <span className="text-[10px] font-bold text-slate-900 truncate max-w-[80px]">{item.destination_branch?.title || 'Dest'}</span>
                             </div>
                           </td>
-                          <td className="px-4 lg:px-6 py-4 text-xs text-slate-600">
-                            {item.bus ? item.bus.bus_number : '-'}
-                          </td>
-                          <td className="px-4 lg:px-6 py-4 text-xs text-slate-400 font-bold font-brand">
-                            {formatTime(item.created_at)}
-                          </td>
-                          <td className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-900">
-                            {paidAmount > 0 ? formatCurrency(paidAmount.toString()) : '-'}
-                          </td>
-                          <td className="px-4 lg:px-6 py-4 text-xs font-bold text-slate-900">
-                            {toPay > 0 ? formatCurrency(toPay.toString()) : '-'}
+                          <td className="px-4 lg:px-6 py-4 text-right">
+                             {renderActionShortcut(item)}
                           </td>
                         </tr>
-                        {/* Second Row - Description */}
                         <tr 
-                          className="hover:bg-slate-50 transition-all group cursor-pointer border-b-2 border-slate-200"
+                          className="hover:bg-slate-50 transition-all group cursor-pointer border-b border-slate-100"
                           onClick={() => navigate(`/shipments/${item.tracking_id}`)}
                         >
-                          <td colSpan={7} className="px-4 lg:px-6 py-4 text-xs text-slate-600 bg-slate-50/50 border-t border-slate-200">
-                            <div className="flex items-start gap-2 pt-2">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Description:</span>
-                              <span>{item.description && item.description.trim() !== '' ? item.description : 'No description provided'}</span>
+                          <td colSpan={7} className="px-4 lg:px-6 py-2 text-[10px] text-slate-500 bg-slate-50/30">
+                            <div className="flex items-center gap-3">
+                              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest font-brand">Description:</span>
+                              <span className="truncate italic">
+                                {item.description && item.description.trim() !== '' ? item.description : 'No description'}
+                              </span>
+                              {item.bus && (
+                                <>
+                                  <span className="ml-4 text-[8px] font-bold text-slate-400 uppercase tracking-widest font-brand">Bus:</span>
+                                  <span className="font-bold text-slate-700">{item.bus.bus_number}</span>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

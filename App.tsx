@@ -42,6 +42,11 @@ const TrackingPageWrapper = ({ currentUser }: { currentUser: any }) => {
 
 const AppContent = () => {
   const { currentUser, organization, loading } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isPublicTracking = location.pathname.startsWith('/track/');
+  const isTrackingPage = location.pathname === '/tracking';
 
   if (loading) {
     return (
@@ -58,9 +63,6 @@ const AppContent = () => {
     return <OrganizationNotFound />;
   }
 
-  const location = useLocation();
-  const isPublicTracking = location.pathname.startsWith('/track/');
-  const isTrackingPage = location.pathname === '/tracking';
 
   // Allow direct access to tracking pages for everyone (even logged out) - check this FIRST
   if (isPublicTracking || isTrackingPage) {
