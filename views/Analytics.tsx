@@ -13,11 +13,13 @@ import {
   Calendar,
   Building2,
   Bus,
+  Printer,
   CreditCard,
   ArrowRight,
-  ArrowUpRight,
+  ArrowUpRight,  
   ArrowDownRight,
   Truck,
+  CheckCircle,
   MapPin
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -37,13 +39,14 @@ export const Analytics: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-      // Try to fetch branches for both admin types (branch admins might have limited access)
-      fetchAdminBranches().catch(() => {
-        // Silently fail if branch admin doesn't have access - backend will handle filtering
-      });
+      if (isSuperAdmin) {
+        fetchAdminBranches().catch(() => {
+           // Silently fail
+        });
+      }
       fetchBuses();
     }
-  }, [currentUser, fetchAdminBranches, fetchBuses]);
+  }, [currentUser, fetchAdminBranches, fetchBuses, isSuperAdmin]);
 
   useEffect(() => {
     if (currentUser) {
@@ -174,12 +177,128 @@ export const Analytics: React.FC = () => {
     }
   };
 
-  const renderActionShortcut = (item: any) => {
+  const handlePrint = () => {
+    if (!analyticsData) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const fromDate = filters.startDate || 'N/A';
+    const toDate = filters.endDate || 'N/A';
+    const fromCity = offices.find(o => o.id === filters.sourceBranchSlug)?.name || 'ALL STARTING BRANCHES';
+    const toCity = offices.find(o => o.id === filters.destinationBranchSlug)?.name || 'ALL ENDING BRANCHES';
+    const reportDate = new Date().toLocaleDateString('en-GB'); // Standard DD/MM/YYYY
+    const reportTime = new Date().toLocaleTimeString('en-GB', { hour12: false });
+
+    const tableRows = analyticsData.data.map((item, idx) => {
+      const paidAmount = item.payment_mode === PaymentMode.SENDER_PAYS ? parseFloat(item.price) : 0;
+      const toPay = item.payment_mode === PaymentMode.RECEIVER_PAYS ? parseFloat(item.price) : 0;
+      
+      return `
+        <tr>
+          <td style="border: 1px solid #000; padding: 4px; font-size: 10px; text-align: center;">
+            ${item.tracking_id}<br/>${new Date(item.created_at).toLocaleDateString('en-GB')}
+          </td>
+          <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">
+            To: ${item.receiver_name} (${item.destination_branch?.title || 'N/A'})<br/>
+            From: ${item.sender_name} (${item.source_branch?.title || 'N/A'})
+          </td>
+          <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">
+            To: ${item.receiver_phone}<br/>From: ${item.sender_phone}
+          </td>
+          <td style="border: 1px solid #000; padding: 4px; font-size: 10px;">
+            ${item.description || '-'}<br/>Mode: ${item.payment_mode || '-'}
+          </td>
+          <td style="border: 1px solid #000; padding: 4px; font-size: 10px; text-align: center;">
+            ${item.bus ? item.bus.bus_number : '-'}<br/>${new Date(item.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+          </td>
+          <td style="border: 1px solid #000; padding: 4px; font-size: 10px; text-align: right;">
+            ${paidAmount > 0 ? paidAmount.toFixed(2) : '-'}
+          </td>
+          <td style="border: 1px solid #000; padding: 4px; font-size: 10px; text-align: right;">
+            ${toPay > 0 ? toPay.toFixed(2) : '-'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Parcel Outward Register</title>
+          <style>
+            body { font-family: sans-serif; padding: 10px; color: #000; }
+            .report-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 10px; }
+            .title { font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 8px; }
+            .meta-info { font-size: 11px; font-weight: bold; line-height: 1.6; }
+            .meta-row { display: flex; justify-content: space-between; }
+            .meta-left { flex: 1; text-align: left; padding-left: 20%; }
+            .meta-right { text-align: right; min-width: 150px; }
+            table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+            th { border: 1px solid #000; padding: 6px; font-size: 10px; background: #eee; text-align: left; font-weight: bold; text-transform: uppercase; }
+            @media print {
+              button { display: none; }
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="report-header">
+            <div class="title">PARCEL OUTWARD REGISTER</div>
+            <div class="meta-info">
+              <div class="meta-row">
+                <div class="meta-left">From Date : ${fromDate} To : ${toDate} Parcel Type : All</div>
+                <div class="meta-right">Date : ${reportDate}</div>
+              </div>
+              <div class="meta-row">
+                <div class="meta-left">From City : ${fromCity.toUpperCase()} &nbsp;&nbsp;&nbsp;&nbsp; To City : ${toCity.toUpperCase()}</div>
+                <div class="meta-right">Time : ${reportTime}</div>
+              </div>
+              <div class="meta-row">
+                <div class="meta-left"></div>
+                <div class="meta-right">Page No : 1 of : 1</div>
+              </div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 10%;">Txn ID<br/>Date</th>
+                <th style="width: 25%;">To Name / Branch<br/>From Name / Branch</th>
+                <th style="width: 12%;">To Mobile<br/>From Mobile</th>
+                <th>Description Of Goods<br/>Payment Mode</th>
+                <th style="width: 12%;">Bus No<br/>Time</th>
+                <th style="width: 10%; text-align: right;">Paid Amount</th>
+                <th style="width: 10%; text-align: right;">To Pay</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+          
+          <script>
+            window.onload = () => {
+              window.print();
+              setTimeout(() => { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const renderActionShortcut = (item: any, isMobile: boolean = false) => {
     if (isSuperAdmin) return null;
     
     const myOfficeId = currentUser?.officeId;
     const isSource = item.source_branch?.slug === myOfficeId;
     const isDest = item.destination_branch?.slug === myOfficeId;
+
+    const buttonBaseClasses = `group flex items-center gap-2 px-4 py-2 bg-slate-950 text-white rounded-full border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.2)] hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:border-orange-500 active:scale-95 transition-all duration-300 ${isMobile ? 'w-full justify-center' : ''}`;
+    const buttonArriveClasses = `group flex items-center gap-2 px-4 py-2 bg-slate-950 text-white rounded-full border border-sky-500/50 shadow-[0_0_10px_rgba(14,165,233,0.2)] hover:shadow-[0_0_20px_rgba(14,165,233,0.4)] hover:border-sky-500 active:scale-95 transition-all duration-300 ${isMobile ? 'w-full justify-center' : ''}`;
 
     if (isSource && item.current_status === ParcelStatus.BOOKED) {
       return (
@@ -188,9 +307,10 @@ export const Analytics: React.FC = () => {
             e.stopPropagation();
             await handleUpdateStatus(item.tracking_id, ParcelStatus.IN_TRANSIT, "Dispatched from analytics");
           }}
-          className="px-3 py-1 bg-slate-950 text-white text-[9px] font-bold uppercase tracking-[0.1em] border-l-2 border-orange-500 hover:bg-orange-600 transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap"
+          className={buttonBaseClasses}
         >
-          Mark as In Transit
+          <span className="text-[10px] font-bold uppercase tracking-widest group-hover:text-orange-100">Dispatch Parcel</span>
+          <ArrowRight className="w-3.5 h-3.5 text-orange-500 group-hover:translate-x-1 transition-transform" />
         </button>
       );
     }
@@ -202,17 +322,19 @@ export const Analytics: React.FC = () => {
             e.stopPropagation();
             await handleUpdateStatus(item.tracking_id, ParcelStatus.ARRIVED, "Arrived at destination");
           }}
-          className="px-3 py-1 bg-slate-950 text-white text-[9px] font-bold uppercase tracking-[0.1em] border-l-2 border-sky-500 hover:bg-sky-600 transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap"
+          className={buttonArriveClasses}
         >
-          Mark as Arrived
+          <span className="text-[10px] font-bold uppercase tracking-widest group-hover:text-sky-100">Mark Arrived</span>
+          <CheckCircle className="w-3.5 h-3.5 text-sky-500 group-hover:scale-110 transition-transform" />
         </button>
       );
     }
 
     return (
-      <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest italic">
-        No Action
-      </span>
+       <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-100 bg-slate-50/50 ${isMobile ? 'w-full justify-center' : ''}`}>
+         <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">No Action Required</span>
+       </div>
     );
   };
 
@@ -302,41 +424,45 @@ export const Analytics: React.FC = () => {
             </div>
           </div>
 
-          {/* Source Branch */}
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Source Branch</label>
-            <div className="relative">
-              <ArrowUpRight className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <select
-                value={filters.sourceBranchSlug || ''}
-                onChange={(e) => handleFilterChange('sourceBranchSlug', e.target.value || undefined)}
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/30"
-              >
-                <option value="">All Starting Branches</option>
-                {offices.map(office => (
-                  <option key={office.id} value={office.id}>{office.name}</option>
-                ))}
-              </select>
+          {/* Source Branch - Only for Super Admin */}
+          {isSuperAdmin && (
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Source Branch</label>
+              <div className="relative">
+                <ArrowUpRight className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <select
+                  value={filters.sourceBranchSlug || ''}
+                  onChange={(e) => handleFilterChange('sourceBranchSlug', e.target.value || undefined)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/30"
+                >
+                  <option value="">All Starting Branches</option>
+                  {offices.map(office => (
+                    <option key={office.id} value={office.id}>{office.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Destination Branch */}
-          <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Destination Branch</label>
-            <div className="relative">
-              <ArrowDownRight className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <select
-                value={filters.destinationBranchSlug || ''}
-                onChange={(e) => handleFilterChange('destinationBranchSlug', e.target.value || undefined)}
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/30"
-              >
-                <option value="">All Ending Branches</option>
-                {offices.map(office => (
-                  <option key={office.id} value={office.id}>{office.name}</option>
-                ))}
-              </select>
+          {/* Destination Branch - Only for Super Admin */}
+          {isSuperAdmin && (
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Destination Branch</label>
+              <div className="relative">
+                <ArrowDownRight className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <select
+                  value={filters.destinationBranchSlug || ''}
+                  onChange={(e) => handleFilterChange('destinationBranchSlug', e.target.value || undefined)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500/30"
+                >
+                  <option value="">All Ending Branches</option>
+                  {offices.map(office => (
+                    <option key={office.id} value={office.id}>{office.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Bus */}
           <div>
@@ -428,11 +554,22 @@ export const Analytics: React.FC = () => {
             <h3 className="font-brand font-bold text-base sm:text-lg text-slate-900 tracking-tight">Results</h3>
             <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-[0.2em] mt-0.5">Shipments Found</p>
           </div>
-          {analyticsData && (
-            <div className="text-[10px] sm:text-xs text-slate-600 font-bold">
-              Showing {((analyticsData.pagination.page - 1) * analyticsData.pagination.page_size) + 1} - {Math.min(analyticsData.pagination.page * analyticsData.pagination.page_size, analyticsData.pagination.total)} of {analyticsData.pagination.total}
-            </div>
-          )}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+            {analyticsData && (
+              <button
+                onClick={handlePrint}
+                className="group flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest border-l-2 border-orange-500 hover:bg-black transition-all active:scale-95 shadow-lg"
+              >
+                <Printer className="w-3.5 h-3.5 text-orange-400" />
+                Print Report
+              </button>
+            )}
+            {analyticsData && (
+              <div className="text-[10px] sm:text-xs text-slate-600 font-bold">
+                Showing {((analyticsData.pagination.page - 1) * analyticsData.pagination.page_size) + 1} - {Math.min(analyticsData.pagination.page * analyticsData.pagination.page_size, analyticsData.pagination.total)} of {analyticsData.pagination.total}
+              </div>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -460,73 +597,66 @@ export const Analytics: React.FC = () => {
                   <div
                     key={item.slug}
                     onClick={() => navigate(`/shipments/${item.tracking_id}`)}
-                    className="p-4 hover:bg-slate-50 transition-all cursor-pointer active:bg-slate-100"
+                    className="p-4 hover:bg-slate-50 transition-all cursor-pointer active:bg-slate-100 animate-in fade-in"
+                    style={{ animationDelay: `${idx * 50}ms` }}
                   >
                     <div className="flex items-start gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#F97316] flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[#F97316] flex-shrink-0">
                         <Package className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="font-brand font-bold text-sm text-slate-900 block truncate">{item.tracking_id}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tracking ID</span>
+                        <span className="font-brand font-bold text-slate-900 text-base block truncate">{item.tracking_id}</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Tracking ID</span>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="text-xs text-slate-400 font-bold font-brand">{formatTime(item.created_at)}</div>
-                        <div className="text-[9px] text-slate-500">{formatDate(item.day || item.created_at)}</div>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest flex-shrink-0
+                          ${item.current_status === ParcelStatus.ARRIVED ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
+                          item.current_status === ParcelStatus.IN_TRANSIT ? 'bg-sky-500/10 text-sky-600 border border-sky-500/20' :
+                             'bg-slate-100 text-slate-500 border border-slate-200'}
+                       `}>
+                        {item.current_status.toLowerCase().replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Route & Parties */}
+                      <div>
+                        <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap mb-2">
+                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Route:</span>
+                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                  <span className="text-xs font-bold text-slate-600 truncate">{item.source_branch?.title || 'Source'}</span>
+                                  <ArrowRight className="w-3 h-3 text-[#F97316] flex-shrink-0" />
+                                  <span className="text-xs font-bold text-slate-900 bg-orange-50 px-2 py-0.5 rounded border border-orange-100 truncate">{item.destination_branch?.title || 'Dest'}</span>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
+                                <div>
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">From</span>
+                                  <div className="text-xs font-bold text-slate-700 truncate">{item.sender_name}</div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">To</span>
+                                  <div className="text-xs font-bold text-slate-700 truncate">{item.receiver_name}</div>
+                                </div>
+                            </div>
+                        </div>
+                      </div>
+
+                      {/* Info Row */}
+                      <div className="flex items-center justify-between pt-1">
+                         <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Date:</span>
+                            <span className="text-xs text-slate-800 font-bold font-brand">{formatDate(item.day || item.created_at)}</span>
+                         </div>
+                         <div className="text-right flex items-center gap-2">
+                           {toPay > 0 && <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-md border border-orange-100">Topay: {formatCurrency(toPay.toString())}</span>}
+                           {paidAmount > 0 && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">Paid: {formatCurrency(paidAmount.toString())}</span>}
+                         </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-end mb-3">
-                       {renderActionShortcut(item)}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">To</span>
-                          <div className="text-xs font-bold text-slate-900 truncate">{item.receiver_name}</div>
-                          <div className="text-[10px] text-slate-500 truncate">{item.receiver_phone}</div>
-                          {item.destination_branch && (
-                            <div className="text-[9px] text-slate-400 font-medium truncate mt-0.5">{item.destination_branch.title}</div>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">From</span>
-                          <div className="text-xs font-bold text-slate-900 truncate">{item.sender_name}</div>
-                          <div className="text-[10px] text-slate-500 truncate">{item.sender_phone}</div>
-                          {item.source_branch && (
-                            <div className="text-[9px] text-slate-400 font-medium truncate mt-0.5">{item.source_branch.title}</div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <div>
-                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Bus</span>
-                          <div className="text-xs text-slate-600">{item.bus ? item.bus.bus_number : '-'}</div>
-                        </div>
-                        <div className="text-right">
-                          {paidAmount > 0 && (
-                            <div className="mb-1">
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Paid</span>
-                              <div className="text-xs font-bold text-emerald-600">{formatCurrency(paidAmount.toString())}</div>
-                            </div>
-                          )}
-                          {toPay > 0 && (
-                            <div>
-                              <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">To Pay</span>
-                              <div className="text-xs font-bold text-orange-600">{formatCurrency(toPay.toString())}</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {item.description && item.description.trim() !== '' && (
-                        <div className="pt-2 border-t border-slate-100">
-                          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Description</span>
-                          <p className="text-xs text-slate-600 line-clamp-2">{item.description}</p>
-                        </div>
-                      )}
+                    <div className="flex justify-end pt-3 mt-3 border-t border-slate-100">
+                       {renderActionShortcut(item, true)}
                     </div>
                   </div>
                 );
@@ -572,11 +702,13 @@ export const Analytics: React.FC = () => {
                           </td>
                           <td className="px-4 lg:px-6 py-4 text-xs">
                             <div className="font-bold text-slate-800">{item.receiver_name}</div>
-                            <div className="text-slate-500 text-[10px] font-bold">{item.receiver_phone}</div>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{item.destination_branch?.title || 'Dest'}</div>
+                            <div className="text-slate-500 text-[10px] font-medium mt-0.5">{item.receiver_phone}</div>
                           </td>
                           <td className="px-4 lg:px-6 py-4 text-xs">
                             <div className="font-bold text-slate-800">{item.sender_name}</div>
-                            <div className="text-slate-500 text-[10px] font-bold">{item.sender_phone}</div>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">{item.source_branch?.title || 'Source'}</div>
+                            <div className="text-slate-500 text-[10px] font-medium mt-0.5">{item.sender_phone}</div>
                           </td>
                           <td className="px-4 lg:px-6 py-4">
                             <div className="flex flex-col gap-1">

@@ -347,7 +347,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           await fetchAdminBranches();
         }
 
-        await fetchParcels();
+        await fetchParcels(user);
 
         return { success: true, message: data.message };
       }

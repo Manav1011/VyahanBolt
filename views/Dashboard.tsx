@@ -67,12 +67,15 @@ export const Dashboard: React.FC = () => {
     </div>
   ); // Closing tag for StatCard component
 
-  const renderActionShortcut = (parcel: any) => {
+  const renderActionShortcut = (parcel: any, isMobile: boolean = false) => {
     if (currentUser?.role === UserRole.SUPER_ADMIN) return null;
     
     const myOfficeId = currentUser?.officeId;
     const isSource = parcel.sourceOfficeId === myOfficeId;
     const isDest = parcel.destinationOfficeId === myOfficeId;
+
+    const buttonBaseClasses = `group inline-flex items-center gap-2 px-4 py-2 bg-slate-950 text-white rounded-full border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.2)] hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:border-orange-500 active:scale-95 transition-all duration-300 ${isMobile ? 'w-full justify-center !flex' : ''}`;
+    const buttonArriveClasses = `group inline-flex items-center gap-2 px-4 py-2 bg-slate-950 text-white rounded-full border border-sky-500/50 shadow-[0_0_10px_rgba(14,165,233,0.2)] hover:shadow-[0_0_20px_rgba(14,165,233,0.4)] hover:border-sky-500 active:scale-95 transition-all duration-300 ${isMobile ? 'w-full justify-center !flex' : ''}`;
 
     if (isSource && parcel.currentStatus === ParcelStatus.BOOKED) {
       return (
@@ -82,9 +85,10 @@ export const Dashboard: React.FC = () => {
             const res = await updateParcelStatus(parcel.trackingId, ParcelStatus.IN_TRANSIT, "Dispatched from dashboard");
             if (!res.success) alert(res.message);
           }}
-          className="px-3 py-1.5 bg-slate-950 text-white text-[9px] font-bold uppercase tracking-[0.1em] border-l-2 border-orange-500 hover:bg-orange-600 transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap"
+          className={buttonBaseClasses}
         >
-          Mark as In Transit
+          <span className="text-[10px] font-bold uppercase tracking-widest group-hover:text-orange-100">Dispatch Parcel</span>
+          <ArrowRight className="w-3.5 h-3.5 text-orange-500 group-hover:translate-x-1 transition-transform" />
         </button>
       );
     }
@@ -97,16 +101,18 @@ export const Dashboard: React.FC = () => {
             const res = await updateParcelStatus(parcel.trackingId, ParcelStatus.ARRIVED, "Arrived at destination");
             if (!res.success) alert(res.message);
           }}
-          className="px-3 py-1.5 bg-slate-950 text-white text-[9px] font-bold uppercase tracking-[0.1em] border-l-2 border-sky-500 hover:bg-sky-600 transition-all duration-300 active:scale-95 shadow-lg whitespace-nowrap"
+          className={buttonArriveClasses}
         >
-          Mark as Arrived
+          <span className="text-[10px] font-bold uppercase tracking-widest group-hover:text-sky-100">Mark Arrived</span>
+          <CheckCircle className="w-3.5 h-3.5 text-sky-500 group-hover:scale-110 transition-transform" />
         </button>
       );
     }
     return (
-      <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest italic group-hover:text-slate-400 transition-colors">
-        No Action Required
-      </span>
+      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-100 bg-slate-50/50 ${isMobile ? 'w-full justify-center' : ''}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">No Action Required</span>
+      </div>
     );
   };
 
@@ -252,10 +258,6 @@ export const Dashboard: React.FC = () => {
                       {parcel.currentStatus.toLowerCase().replace('_', ' ')}
                     </span>
                   </div>
-                  <div className="flex justify-end pt-1 px-4 mb-3">
-                    {renderActionShortcut(parcel)}
-                  </div>
-                  
                   <div className="pl-13 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Route:</span>
@@ -266,9 +268,13 @@ export const Dashboard: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Date:</span>
-                      <span className="text-xs text-slate-400 font-bold font-brand">{new Date(parcel.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                       <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Date:</span>
+                       <span className="text-xs text-slate-400 font-bold font-brand">{new Date(parcel.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </div>
+                  </div>
+
+                  <div className="flex justify-end pt-3 mt-3 border-t border-slate-100">
+                    {renderActionShortcut(parcel, true)}
                   </div>
                 </div>
               ))}
