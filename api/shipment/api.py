@@ -6,6 +6,12 @@ from .models import Shipment, ShipmentHistory, ShipmentStatus, generate_tracking
 from organization.models import Branch, Bus
 from organization.serializers import BusSerializer
 from core.sms_service import async_send_sms
+from core.constants import (
+    SENDER_SHIPMENT_CREATED_TEMPLATE,
+    RECEIVER_SHIPMENT_CREATED_TEMPLATE,
+    ADMIN_SHIPMENT_CREATED_TEMPLATE
+)
+from Messaging.models import Message
 from django.db.models import Q
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -43,7 +49,7 @@ async def create_shipment(request, credentials: ShipmentCreateSerializer, user=D
     
     # Get destination branch
     try:
-        destination_branch = await Branch.objects.select_related('organization').aget(
+        destination_branch = await Branch.objects.select_related('organization', 'owner').aget(
             slug=credentials.destination_branch_slug,
             organization=organization
         )
@@ -134,33 +140,47 @@ async def create_shipment(request, credentials: ShipmentCreateSerializer, user=D
         "available_buses": all_buses  # All buses, frontend will filter/highlight
     }
     
-    # Send SMS Notifications
+    # Send SMS and Record Messaging
     try:
         tracking_link = f"http://localhost:3000/track/{shipment.tracking_id}"
         
-        # Notify Sender
-        sender_msg = (
-            f"Shipment Confirmed!\n"
-            f"Tracking ID: {shipment.tracking_id}\n"
-            f"To: {shipment.receiver_name}\n"
-            f"Route: {shipment.source_branch.title} -> {shipment.destination_branch.title}\n"
-            f"- Vyhan Logistics"
-        )
-        await async_send_sms(shipment.sender_phone, sender_msg)
+        # Prepare Data for Templates
+        template_data = {
+            "tracking_id": shipment.tracking_id,
+            "sender_name": shipment.sender_name,
+            "receiver_name": shipment.receiver_name,
+            "source": shipment.source_branch.title,
+            "destination": shipment.destination_branch.title
+        }
         
-        # Notify Receiver
-        receiver_msg = (
-            f"Incoming Shipment!\n"
-            f"From: {shipment.sender_name}\n"
-            f"Tracking ID: {shipment.tracking_id}\n"
-            f"Route: {shipment.source_branch.title} -> {shipment.destination_branch.title}\n"
-            f"- Vyhan Logistics"
-        )
-        await async_send_sms(shipment.receiver_phone, receiver_msg)
+        # Notify Organization Admin
+        admin_msg = ADMIN_SHIPMENT_CREATED_TEMPLATE.format(**template_data)
+        if organization.owner:
+            await Message.objects.acreate(
+                organization=organization,
+                user=organization.owner,
+                content=admin_msg
+            )
+            
+        # Notify Branch Admin (the creator) if different from Org Admin
+        if organization.owner_id != user.id:
+            await Message.objects.acreate(
+                organization=organization,
+                user=user,
+                content=f"Successfully booked shipment {shipment.tracking_id} to {shipment.destination_branch.title}."
+            )
+
+        # Notify Receiving Branch Admin
+        if destination_branch.owner_id and destination_branch.owner_id != user.id:
+            await Message.objects.acreate(
+                organization=organization,
+                user=destination_branch.owner,
+                content=f"Incoming shipment {shipment.tracking_id} from {shipment.source_branch.title} is on its way!"
+            )
         
     except Exception as e:
-        # Don't fail the request if SMS fails
-        print(f"SMS Sending failed: {e}")
+        # Don't fail the request if messaging fails
+        print(f"Messaging/SMS Sending failed: {e}")
     
     return response(
         status=201,

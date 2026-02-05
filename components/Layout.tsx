@@ -13,7 +13,9 @@ import {
   X,
   User,
   ChevronDown,
-  BarChart3
+  BarChart3,
+  MessageSquare,
+  Search
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -69,6 +71,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NavItem path="/offices" icon={Building2} label="Branches" />
               <NavItem path="/buses" icon={Bus} label="Bus Management" />
               <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
+              <NavItem path="/messages" icon={MessageSquare} label="Messages" />
             </>
           )}
 
@@ -77,6 +80,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NavItem path="/dashboard" icon={LayoutDashboard} label="Dashboard" />
               <NavItem path="/book" icon={PackagePlus} label="New Registration" />
               <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
+              <NavItem path="/messages" icon={MessageSquare} label="Messages" />
             </>
           )}
 
@@ -130,6 +134,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <NavItem path="/offices" icon={Building2} label="Branches" />
                   <NavItem path="/buses" icon={Bus} label="Bus Management" />
                   <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
+                  <NavItem path="/messages" icon={MessageSquare} label="Messages" />
                 </>
              )}
              {currentUser?.role === UserRole.OFFICE_ADMIN && (
@@ -137,6 +142,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <NavItem path="/dashboard" icon={LayoutDashboard} label="Dashboard" />
                   <NavItem path="/book" icon={PackagePlus} label="New Registration" />
                   <NavItem path="/analytics" icon={BarChart3} label="Analytics" />
+                  <NavItem path="/messages" icon={MessageSquare} label="Messages" />
                 </>
              )}
             <button onClick={() => logout()} className="block w-full text-center p-4 text-rose-500 font-bold border border-rose-500/20 bg-rose-500/5 rounded-xl">Logout</button>
@@ -156,6 +162,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                activeView === 'offices' ? 'Branches' :
                activeView === 'buses' ? 'Bus Management' :
                activeView === 'dashboard' ? 'Dashboard' :
+               activeView === 'messages' ? 'Internal Messages' :
                activeView.charAt(0).toUpperCase() + activeView.slice(1)}
             </h2>
             <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-brand mt-0.5">Logistics Management System</p>

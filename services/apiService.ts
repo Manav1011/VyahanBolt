@@ -134,3 +134,14 @@ export const getBranchAnalytics = (filters: any) => {
     const api = createApiClient();
     return api.post('/analytics/branch/', filters);
 };
+
+// Messaging APIs
+export const fetchMessages = () => {
+    const api = createApiClient();
+    return api.get('/messages/');
+};
+
+export const markMessageAsRead = (messageId: number) => {
+    const api = createApiClient();
+    return api.patch(`/messages/${messageId}/read/`, {});
+};

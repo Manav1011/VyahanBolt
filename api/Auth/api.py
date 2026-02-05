@@ -26,6 +26,7 @@ async def login(credentials: LoginRequest):
             message="Unauthorized",
             error="Invalid username or password"
         )
+        
     # check the type    
     login_type = credentials.login_type
     if login_type == "organization":

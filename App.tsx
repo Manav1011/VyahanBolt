@@ -10,6 +10,7 @@ import { ParcelList } from './views/ParcelList';
 import { ShipmentDetails } from './views/ShipmentDetails';
 import { Tracking } from './views/Tracking';
 import { Analytics } from './views/Analytics';
+import { Messages } from './views/Messages';
 import { OrganizationNotFound } from './views/OrganizationNotFound';
 import { UserRole } from './types';
 
@@ -111,6 +112,7 @@ const AppContent = () => {
         <Route path="/shipments" element={<Navigate to="/analytics" replace />} />
         <Route path="/shipments/:trackingId" element={<ShipmentDetails />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/messages" element={<Messages />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
